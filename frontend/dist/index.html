@@ -1,0 +1,4447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
+<title>本机加密终端 · TEXT_CRYPTO</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23000000'/%3E%3Cpath d='M20 30v-6a12 12 0 0 1 24 0v6' fill='none' stroke='%2340ff9b' stroke-width='5' stroke-linecap='round'/%3E%3Crect x='16' y='29' width='32' height='24' rx='7' fill='%2340ff9b'/%3E%3Cpath d='M32 37v7' stroke='%23000000' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #101214;
+  --black: #191c1f;
+  --panel: #1b1f22;
+  --field: #121517;
+  --green: #91d6aa;
+  --green-bright: #b4e9c4;
+  --green-dark: #395b46;
+  --green-border: #353b3f;
+  --green-border-bright: #91d6aa;
+  --white: #f1f3f4;
+  --soft: #cbd0d3;
+  --muted: #929ba0;
+  --danger: #ed858b;
+  --danger-border: #62383d;
+  --danger-bg: #241719;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular", "Courier New", "Microsoft YaHei", "PingFang SC", monospace;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --transition: 180ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  min-height: 100%;
+  color-scheme: dark;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--white);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.55;
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+body.app-active {
+  height: 100vh;
+  overflow: hidden;
+}
+
+::selection {
+  color: var(--black);
+  background: var(--green);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+}
+
+.led {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.blink {
+  color: var(--green);
+  animation: blink 1.1s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  0%, 48% { opacity: 1; }
+  49%, 100% { opacity: 0; }
+}
+
+/* Shared controls */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 16px;
+  color: var(--soft);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  white-space: nowrap;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+  transition: color var(--transition), border-color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.38;
+}
+
+.btn-primary {
+  color: var(--black);
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.btn-primary:hover:not(:disabled) {
+  color: var(--black);
+  border-color: var(--green-bright);
+  background: var(--green-bright);
+}
+
+.btn-secondary {
+  color: var(--green);
+  border-color: var(--green-border);
+  background: var(--black);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  color: var(--green-bright);
+  border-color: var(--green);
+}
+
+.btn-ghost {
+  color: var(--muted);
+  border-color: var(--green-border);
+  background: var(--black);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--white);
+  border-color: var(--green);
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--black);
+}
+
+.btn-danger:hover:not(:disabled) {
+  color: #ffd2d7;
+  border-color: var(--danger);
+}
+
+.btn-small {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.btn-compact {
+  min-height: 35px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+input[type="text"],
+input[type="password"],
+textarea {
+  width: 100%;
+  color: var(--white);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.6;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: var(--field);
+  transition: border-color var(--transition);
+}
+
+input[type="text"],
+input[type="password"] {
+  min-height: 42px;
+  padding: 9px 12px;
+}
+
+textarea {
+  min-height: 100px;
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #5e8871;
+  opacity: 1;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: var(--green);
+}
+
+input:disabled,
+textarea:disabled {
+  color: #5f7869;
+  opacity: 0.65;
+}
+
+textarea[readonly] {
+  color: var(--green);
+  background: var(--black);
+}
+
+.password-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.password-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.password-row .btn {
+  flex: 0 0 auto;
+  min-width: 52px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--white);
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--green);
+}
+
+.status {
+  padding: 10px 12px;
+  color: var(--green);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+}
+
+.status.is-error {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.status.is-success,
+.status.is-info {
+  color: var(--green);
+  border-color: var(--green-border);
+}
+
+.status.is-warning {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+/* Login terminal */
+
+.boot-screen {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px 16px 36px;
+  place-items: center;
+  background: var(--bg);
+}
+
+.boot-wrap {
+  width: min(650px, 100%);
+}
+
+.boot-brand {
+  margin-bottom: 14px;
+  color: var(--green);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.terminal {
+  overflow: hidden;
+  border: 2px solid var(--green);
+  border-radius: var(--radius);
+  background: var(--black);
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 16px;
+  color: var(--green);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid var(--green-border);
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.terminal-dots i {
+  width: 7px;
+  height: 7px;
+  border: 2px solid var(--green-border);
+  border-radius: 50%;
+}
+
+.terminal-dots i:first-child {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.terminal-screen {
+  padding: clamp(26px, 5vw, 48px);
+}
+
+.terminal-title {
+  margin: 0 0 30px;
+  color: var(--white);
+  font-size: clamp(34px, 6vw, 50px);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1.15;
+}
+
+.boot-block {
+  max-width: 440px;
+}
+
+#login-panel,
+#setup-panel {
+  width: 100%;
+  max-width: none;
+}
+
+.login-account-name {
+  color: var(--white);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+#login-panel .terminal-prompt,
+#setup-panel .terminal-prompt {
+  margin-bottom: 16px;
+}
+
+#login-panel .field-label,
+#setup-panel .field-label {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+#login-panel .password-row,
+#setup-panel .password-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+#login-panel .password-row .terminal-input,
+#setup-panel .password-row .terminal-input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 50px !important;
+  padding-right: 13px;
+  font-size: 16px !important;
+}
+
+#login-panel .password-row .btn,
+#setup-panel .password-row .btn {
+  flex: 0 0 64px;
+  min-width: 64px;
+  min-height: 50px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+#login-panel #login-submit,
+#setup-panel #setup-submit {
+  min-height: 46px;
+  margin-top: 14px;
+  font-size: 14.5px;
+}
+
+#setup-panel .field-label[for="setup-nickname"] {
+  margin-top: 0;
+}
+
+#setup-panel .field-label[for="setup-password"] {
+  margin-top: 14px;
+}
+
+#setup-panel #setup-nickname {
+  width: 100%;
+  min-height: 50px !important;
+}
+
+#setup-panel .terminal-hint {
+  margin-top: 14px;
+}
+
+.terminal-prompt {
+  margin: 0 0 18px;
+  color: var(--green);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.terminal-input {
+  min-height: 48px !important;
+  color: var(--green) !important;
+  font-size: 16px !important;
+  letter-spacing: 0.08em;
+}
+
+.boot-block .btn-block {
+  margin-top: 12px;
+}
+
+.boot-block .status {
+  margin-top: 12px;
+}
+
+.terminal-hint {
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.boot-fatal {
+  max-width: 460px;
+  padding: 12px 14px;
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.65;
+  border: 2px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+}
+
+/* App frame */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.appbar {
+  flex: 0 0 auto;
+  width: 100%;
+  background: var(--green);
+  border-bottom: 2px solid var(--green-dark);
+}
+
+.appbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1600px, 100%);
+  min-height: 48px;
+  margin: 0 auto;
+  padding: 7px clamp(14px, 2vw, 26px);
+}
+
+.app-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  width: min(1600px, 100%);
+  min-height: 0;
+  margin: 0 auto;
+  padding: 10px clamp(14px, 2vw, 26px) 12px;
+}
+
+.appbar .app-brand-title,
+.appbar .account-nickname {
+  color: var(--bg);
+}
+
+.account-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 5px 11px;
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  border: 2px solid var(--bg);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.account-menu-button:hover,
+.account-menu-button[aria-expanded="true"] {
+  color: var(--bg);
+  border-color: var(--bg);
+  background: #53f5a5;
+}
+
+.account-menu-button:focus-visible {
+  outline-color: var(--bg);
+}
+
+.account-menu-button .account-nickname {
+  color: inherit;
+}
+
+.account-chevron {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition);
+}
+
+.account-menu-button[aria-expanded="true"] .account-chevron {
+  transform: rotate(180deg);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-brand-title {
+  color: var(--green);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.account-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-menu-button .account-nickname {
+  max-width: 260px;
+  overflow: hidden;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity-panel {
+  flex: 0 0 auto;
+  padding: 14px 16px 16px;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius);
+  background: var(--black);
+}
+
+.identity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 11px;
+}
+
+.identity-head h1 {
+  margin: 0;
+  color: var(--white);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+#toggle-identity .chevron {
+  transition: transform var(--transition);
+}
+
+#toggle-identity[aria-expanded="false"] .chevron {
+  transform: rotate(-90deg);
+}
+
+.public-key-stage {
+  position: relative;
+  display: grid;
+  min-height: 82px;
+  padding: 17px 20px;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: center;
+  border: 2px solid var(--green-border);
+  border-radius: 10px;
+  background: var(--black);
+  transition: border-color var(--transition);
+}
+
+.public-key-stage:hover,
+.public-key-stage:focus-visible {
+  border-color: var(--green);
+}
+
+.public-key-value {
+  display: block;
+  max-width: 100%;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: clamp(16px, 2.45vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  user-select: all;
+  transition: opacity var(--transition);
+}
+
+.copy-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font-size: clamp(16px, 1.6vw, 21px);
+  font-weight: 700;
+  background: var(--black);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+
+.public-key-stage:hover .copy-overlay,
+.public-key-stage:focus-visible .copy-overlay {
+  opacity: 1;
+}
+
+.public-key-stage:hover .public-key-value,
+.public-key-stage:focus-visible .public-key-value {
+  opacity: 0;
+}
+
+/* Workspace */
+
+.workspace {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(290px, 0.92fr) minmax(0, 2.08fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.contacts-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius);
+  background: var(--black);
+}
+
+.panel-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 2px solid var(--green-border);
+}
+
+.panel-head h2 {
+  margin: 0;
+  color: var(--white);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.contact-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 9px;
+  overflow-y: auto;
+  scrollbar-color: var(--green-dark) var(--black);
+  scrollbar-width: thin;
+}
+
+.contact-scroll::-webkit-scrollbar {
+  width: 9px;
+}
+
+.contact-scroll::-webkit-scrollbar-track {
+  background: var(--black);
+}
+
+.contact-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid var(--black);
+  border-radius: 8px;
+  background: var(--green-dark);
+}
+
+.contact-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contact-item {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+  transition: border-color var(--transition);
+}
+
+.contact-item:hover {
+  border-color: var(--green);
+}
+
+.contact-item.is-selected {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.contact-item.is-selected .contact-select {
+  color: var(--bg);
+  background: var(--green);
+}
+
+.contact-item.is-selected .contact-select:focus-visible {
+  outline-color: var(--bg);
+}
+
+.contact-item.is-selected .contact-avatar {
+  color: var(--bg);
+  border-color: var(--bg);
+  background: transparent;
+}
+
+.contact-item.is-selected .contact-name {
+  color: var(--bg);
+}
+
+.contact-item.is-selected .contact-pin {
+  color: var(--bg);
+  border-color: var(--bg);
+  background: transparent;
+}
+
+.contact-item.is-selected .contact-more {
+  color: var(--bg);
+  border-left-color: var(--bg);
+  background: var(--green);
+}
+
+.contact-item.is-selected .contact-more:hover {
+  color: var(--green);
+  background: var(--bg);
+}
+
+.contact-select {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 10px 8px 10px 10px;
+  color: inherit;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: var(--black);
+}
+
+.contact-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 800;
+  border: 2px solid var(--green-border);
+  border-radius: 8px;
+  background: var(--black);
+}
+
+.contact-info {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.contact-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.contact-name {
+  overflow: hidden;
+  color: var(--white);
+  font-size: 14.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-pin {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  color: var(--green);
+  font-size: 9.5px;
+  font-weight: 700;
+  border: 2px solid var(--green-border);
+  border-radius: 4px;
+  background: var(--black);
+}
+
+.contact-more {
+  flex: 0 0 auto;
+  width: 38px;
+  padding: 0;
+  color: var(--green);
+  font-size: 22px;
+  line-height: 1;
+  border: 0;
+  border-left: 2px solid var(--green-border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--black);
+}
+
+.contact-more:hover {
+  color: var(--green-bright);
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  padding: 40px 18px;
+  text-align: center;
+}
+
+.empty-glyph {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  place-items: center;
+  color: var(--green);
+  font-size: 22px;
+  font-weight: 700;
+  border: 2px solid var(--green-border);
+  border-radius: 12px;
+}
+
+.empty-state strong {
+  color: var(--white);
+  font-size: 16px;
+}
+
+.empty-state p {
+  max-width: 260px;
+  margin: 7px 0 17px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.contacts-footer {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  color: var(--green);
+  font-size: 12px;
+  border-top: 2px solid var(--green-border);
+}
+
+/* Crypto cards */
+
+.crypto-column {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.crypto-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 16px 16px;
+  overflow: hidden;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius);
+  background: var(--black);
+}
+
+.crypto-card.is-idle {
+  border-color: var(--green-border);
+}
+
+.crypto-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.crypto-head h2 {
+  margin: 0;
+  color: var(--white);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.peer-readout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 55%;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.peer-readout strong {
+  overflow: hidden;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crypto-work {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  margin-top: 12px;
+}
+
+.crypto-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.field-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 6px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field-head .meta {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.crypto-input {
+  flex: 1 1 auto;
+  min-height: 80px;
+  resize: none;
+  font-size: 14px;
+  border-color: var(--green-border);
+  background: var(--black);
+}
+
+.crypto-pane .btn {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+.mono-output {
+  color: var(--green) !important;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.crypto-card.is-idle .crypto-input,
+.crypto-card.is-idle .crypto-pane .btn {
+  opacity: 0.45;
+}
+
+/* Contact action menu */
+
+.contact-menu {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  min-width: 160px;
+  padding: 6px;
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+}
+
+.contact-menu button {
+  padding: 9px 10px;
+  color: var(--white);
+  font-size: 13px;
+  text-align: left;
+  border: 0;
+  border-radius: 6px;
+  background: var(--black);
+}
+
+.contact-menu button:hover {
+  color: var(--green);
+  background: #001b0d;
+}
+
+.contact-menu button.is-danger {
+  color: var(--danger);
+}
+
+.account-menu {
+  position: fixed;
+  z-index: 90;
+  display: grid;
+  min-width: 172px;
+  padding: 6px;
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+
+.account-menu button {
+  padding: 10px 11px;
+  color: var(--white);
+  font-size: 14px;
+  text-align: left;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+
+.account-menu button:hover {
+  color: var(--green);
+  background: #001b0d;
+}
+
+.account-menu button:last-child {
+  color: var(--danger);
+}
+
+.account-menu button:last-child:hover {
+  color: #ffd2d7;
+  background: var(--danger-bg);
+}
+
+/* Dialogs */
+
+dialog {
+  width: min(520px, calc(100vw - 26px));
+  max-height: calc(100vh - 26px);
+  padding: 0;
+  overflow: auto;
+  color: var(--white);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+}
+
+dialog.modal-wide {
+  width: min(680px, calc(100vw - 26px));
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.86);
+}
+
+.modal-card {
+  border: 2px solid var(--green);
+  border-radius: var(--radius);
+  background: var(--black);
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px 15px;
+  border-bottom: 2px solid var(--green-border);
+}
+
+.modal-head h2 {
+  margin: 0;
+  color: var(--white);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.modal-close {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  color: var(--green);
+  border: 2px solid var(--green-border);
+  border-radius: 7px;
+  background: var(--black);
+}
+
+.modal-close:hover {
+  color: var(--green-bright);
+  border-color: var(--green);
+}
+
+.modal-close svg {
+  width: 15px;
+  height: 15px;
+}
+
+.modal-body {
+  padding: 18px 20px;
+}
+
+.modal-copy {
+  margin: 0 0 17px;
+  color: var(--soft);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.modal-copy code,
+.settings-section p code,
+.setup-file-copy code {
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 0.98em;
+}
+
+.modal-field {
+  margin-bottom: 14px;
+}
+
+.modal-field:last-child {
+  margin-bottom: 0;
+}
+
+.field-help {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.field-note {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.form-grid.two-col {
+  grid-template-columns: 1fr 1fr;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 14px 20px;
+  border-top: 2px solid var(--green-border);
+}
+
+.setup-file {
+  margin-top: 16px;
+  padding: 14px;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+}
+
+.setup-file-copy {
+  margin: 9px 0 11px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.file-pick-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-pick-state {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.file-pick-state.is-ok {
+  color: var(--green);
+}
+
+.warning-box {
+  margin: 0 0 17px;
+  padding: 12px;
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.65;
+  border: 2px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+}
+
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-section h3 {
+  margin: 0 0 6px;
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.settings-section p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.settings-divider {
+  height: 2px;
+  margin: 19px 0;
+  background: var(--green-border);
+}
+
+.inline-form {
+  display: flex;
+  align-items: stretch;
+  gap: 9px;
+}
+
+.inline-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.inline-form .btn,
+.settings-actions .btn {
+  flex: 0 0 auto;
+  min-width: 94px;
+  white-space: nowrap;
+}
+
+.account-file-block {
+  padding: 13px;
+  border: 2px solid var(--green-border);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+}
+
+.account-file-status-text {
+  margin: 0 0 11px !important;
+  color: var(--green) !important;
+  font-size: 12.5px !important;
+}
+
+.private-key-value {
+  display: block;
+  margin: 0 0 15px;
+  padding: 14px;
+  overflow-wrap: anywhere;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+  user-select: all;
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 12px 15px;
+  color: var(--green);
+  font-size: 13px;
+  line-height: 1.5;
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
+  background: var(--black);
+  animation: toast-in 150ms ease-out;
+}
+
+.toast.is-error {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.toast.is-warning {
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+
+@media (max-width: 1080px) {
+  .workspace {
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.9fr);
+  }
+
+  .peer-readout {
+    max-width: 45%;
+  }
+}
+
+@media (max-width: 880px) {
+  body.app-active {
+    height: auto;
+    overflow: auto;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .contacts-panel {
+    min-height: 340px;
+    max-height: 55vh;
+  }
+
+  .crypto-column {
+    grid-template-rows: auto auto;
+  }
+
+  .crypto-card {
+    min-height: 280px;
+  }
+}
+
+@media (max-width: 640px) {
+  .boot-screen {
+    padding: 14px 10px;
+  }
+
+  .terminal-screen {
+    padding: 25px 18px;
+  }
+
+  .terminal-title {
+    font-size: 34px;
+    margin-bottom: 24px;
+  }
+
+  .app {
+    padding: 0;
+  }
+
+  .appbar-inner {
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 8px 10px;
+  }
+
+  .app-main {
+    padding: 9px 10px 12px;
+    gap: 9px;
+  }
+
+  .account-area {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .account-menu-button .account-nickname {
+    max-width: 65%;
+    font-size: 15px;
+  }
+
+  .identity-panel {
+    padding: 12px;
+  }
+
+  .identity-head h1 {
+    font-size: 21px;
+  }
+
+  .public-key-stage {
+    min-height: 74px;
+    padding: 14px 12px;
+  }
+
+  .public-key-value {
+    font-size: 16px;
+    letter-spacing: 0;
+  }
+
+  .crypto-work {
+    grid-template-columns: 1fr;
+  }
+
+  .crypto-card {
+    min-height: 470px;
+  }
+
+  .peer-readout {
+    max-width: 58%;
+  }
+
+  .crypto-head h2 {
+    font-size: 18px;
+  }
+
+  .form-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-head {
+    padding: 15px 15px 12px;
+  }
+
+  .modal-body {
+    padding: 15px;
+  }
+
+  .modal-actions {
+    padding: 12px 15px;
+  }
+
+  .inline-form {
+    flex-direction: column;
+  }
+
+  .inline-form .btn {
+    width: 100%;
+  }
+}
+
+@media (max-height: 800px) and (min-width: 881px) {
+  body.app-active {
+    height: auto;
+    overflow: auto;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .workspace {
+    min-height: 580px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Refined monochrome surfaces with restrained green accents */
+body,
+html,
+.boot-screen,
+.app {
+  background: radial-gradient(ellipse at 50% -18%, #22272a 0%, var(--bg) 58%);
+}
+
+.btn {
+  border: 1px solid #3a4145;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #24292d, #1b1f22);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .18);
+  transition: color var(--transition), border-color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--white);
+  border-color: #727c80;
+  background: linear-gradient(180deg, #30363a, #24292c);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
+}
+
+.btn-primary {
+  color: #101813;
+  border-color: #91d6aa;
+  background: linear-gradient(135deg, #a7e2b8, #83c99c);
+  box-shadow: 0 3px 10px rgba(89, 166, 114, .15);
+}
+
+.btn-primary:hover:not(:disabled) {
+  color: #0d1711;
+  border-color: #c2efd0;
+  background: linear-gradient(135deg, #c0eccb, #9cddb0);
+  box-shadow: 0 5px 16px rgba(89, 166, 114, .24);
+}
+
+.btn-secondary {
+  color: #b1dfbf;
+  border-color: #45524a;
+  background: linear-gradient(180deg, #252b28, #1c211f);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  color: #d2f0da;
+  border-color: #78b88c;
+  background: #29352d;
+}
+
+.btn-ghost {
+  color: var(--soft);
+  border-color: transparent;
+  background: #222629;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--white);
+  border-color: #555e62;
+  background: #2b3034;
+}
+
+.btn-danger {
+  color: #ee9ba0;
+  border-color: #503338;
+  background: #251d1f;
+}
+
+.btn-danger:hover:not(:disabled) {
+  color: #ffd5d8;
+  border-color: #a15e65;
+  background: #342326;
+}
+
+.field-label,
+.field-head {
+  color: #b4d8bd;
+}
+
+input[type="text"],
+input[type="password"],
+textarea {
+  border: 1px solid #3a4145;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #141719, #171a1c);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .2);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #747e82;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: #75ad85;
+  background: #171b1a;
+  box-shadow: 0 0 0 3px rgba(126, 190, 144, .1);
+}
+
+textarea[readonly] {
+  color: #a8dcb6;
+  background: #171b1c;
+}
+
+.status {
+  border: 1px solid #3b4840;
+  background: linear-gradient(135deg, #202724, #1a1e1c);
+}
+
+.status.is-error,
+.status.is-warning {
+  border-color: #62383d;
+  background: linear-gradient(135deg, #2b1d20, #211719);
+}
+
+.terminal,
+.identity-panel,
+.contacts-panel,
+.crypto-card,
+.modal-card {
+  border: 1px solid #33393d;
+  background: linear-gradient(145deg, #202427 0%, #191d20 76%);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .18), inset 0 1px rgba(255, 255, 255, .025);
+}
+
+.terminal {
+  border-radius: 18px;
+}
+
+.boot-fatal,
+.warning-box {
+  border: 1px solid #62383d;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #2b1d20, #211719);
+}
+
+.terminal-hint,
+.field-help,
+.field-note {
+  color: #929ba0;
+}
+
+.terminal-bar,
+.panel-head,
+.contacts-footer,
+.modal-head,
+.modal-actions {
+  border-color: rgba(220, 229, 232, .09);
+}
+
+.terminal-bar,
+.panel-head,
+.modal-head {
+  border-bottom-width: 1px;
+}
+
+.contacts-footer,
+.modal-actions {
+  border-top-width: 1px;
+}
+
+.terminal-bar {
+  color: #a8dcb6;
+  background: rgba(255, 255, 255, .018);
+}
+
+.terminal-dots i {
+  border-color: #596166;
+}
+
+.terminal-dots i:first-child {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.terminal-title {
+  letter-spacing: -.055em;
+}
+
+.appbar {
+  background: linear-gradient(100deg, #1a1d20, #202427 52%, #1a1d20);
+  border-bottom: 1px solid rgba(225, 233, 235, .1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .18);
+}
+
+.appbar .app-brand-title,
+.appbar .account-nickname {
+  color: var(--white);
+}
+
+.app-brand-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  line-height: 1.15;
+}
+
+.account-menu-button {
+  color: var(--soft);
+  border: 1px solid #40474b;
+  background: #222629;
+}
+
+.account-menu-button:hover,
+.account-menu-button[aria-expanded="true"] {
+  color: var(--white);
+  border-color: #738079;
+  background: #2b332e;
+}
+
+.identity-panel {
+  padding: 16px 18px 18px;
+}
+
+.identity-head h1,
+.panel-head h2,
+.crypto-head h2 {
+  letter-spacing: -.035em;
+}
+
+.public-key-stage {
+  min-height: 82px;
+  border: 1px solid #343b3f;
+  background: linear-gradient(110deg, #171b1d, #1b2022);
+  box-shadow: inset 0 1px 6px rgba(0, 0, 0, .16);
+}
+
+.public-key-stage:hover,
+.public-key-stage:focus-visible {
+  border-color: #64856d;
+  background: linear-gradient(110deg, #1a211d, #1b2022);
+}
+
+.public-key-value,
+.copy-overlay,
+.terminal-input,
+.mono-output {
+  color: #a8dcb6 !important;
+}
+
+.copy-overlay {
+  background: rgba(27, 32, 34, .96);
+}
+
+.workspace {
+  gap: 12px;
+}
+
+.contacts-panel,
+.crypto-card {
+  border-radius: 15px;
+}
+
+.panel-head {
+  padding: 15px 16px;
+}
+
+.contact-item {
+  border: 1px solid transparent;
+  background: #1c2023;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.contact-item:hover {
+  border-color: #41494d;
+  background: #24292c;
+  transform: translateY(-1px);
+}
+
+.contact-item.is-selected {
+  border-color: #668a70;
+  background: linear-gradient(100deg, #334b3b, #2b3b31);
+}
+
+.contact-item.is-selected .contact-select,
+.contact-item.is-selected .contact-more {
+  background: transparent;
+}
+
+.contact-item.is-selected .contact-select,
+.contact-item.is-selected .contact-name,
+.contact-item.is-selected .contact-avatar,
+.contact-item.is-selected .contact-pin,
+.contact-item.is-selected .contact-more {
+  color: #e1f2e5;
+}
+
+.contact-item.is-selected .contact-avatar,
+.contact-item.is-selected .contact-pin {
+  border-color: rgba(220, 241, 225, .34);
+}
+
+.contact-item.is-selected .contact-more {
+  border-left-color: rgba(220, 241, 225, .2);
+}
+
+.contact-item.is-selected .contact-more:hover {
+  color: #b9e6c4;
+  background: rgba(13, 20, 16, .3);
+}
+
+.contact-select,
+.contact-more {
+  background: transparent;
+}
+
+.contact-avatar {
+  border: 1px solid #414a4e;
+  background: #252a2d;
+}
+
+.contact-pin {
+  border: 1px solid #45554a;
+  background: #202522;
+}
+
+.contact-more {
+  border-left: 1px solid #32393d;
+}
+
+.empty-glyph {
+  border: 1px solid #3d464a;
+  background: #22272a;
+}
+
+.contacts-footer {
+  color: #a4d6b1;
+}
+
+.crypto-column {
+  gap: 12px;
+}
+
+.crypto-card {
+  padding: 16px 18px 18px;
+}
+
+.crypto-input {
+  border-color: #353d40;
+  background: #171b1d;
+}
+
+.crypto-card.is-idle .crypto-input,
+.crypto-card.is-idle .crypto-pane .btn {
+  opacity: .58;
+}
+
+.contact-menu,
+.account-menu {
+  border: 1px solid #3c4448;
+  border-radius: 11px;
+  background: #202427;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .42);
+}
+
+.contact-menu button,
+.account-menu button {
+  border-radius: 7px;
+  background: transparent;
+  transition: color var(--transition), background var(--transition);
+}
+
+.contact-menu button:hover,
+.account-menu button:hover {
+  color: #c0e8ca;
+  background: #2a332d;
+}
+
+.account-menu button:last-child:hover {
+  color: #ffd5d8;
+  background: #342326;
+}
+
+dialog::backdrop {
+  background: rgba(4, 6, 7, .76);
+  backdrop-filter: blur(5px);
+}
+
+.modal-card {
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .5);
+}
+
+.modal-close {
+  color: var(--soft);
+  border: 1px solid #3c4448;
+  background: #252a2d;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.modal-close:hover {
+  color: #c0e8ca;
+  border-color: #64856d;
+  background: #29332d;
+}
+
+.setup-file,
+.account-file-block {
+  border: 1px solid #373f43;
+  background: #1b2022;
+}
+
+.private-key-value {
+  color: #b4e2bf;
+  border: 1px solid #49634f;
+  background: #171d19;
+}
+
+.toast {
+  color: #c0e8ca;
+  border: 1px solid #49634f;
+  background: #202724;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
+}
+
+.toast.is-error {
+  border-color: #62383d;
+  background: #2b1d20;
+}
+
+.toast.is-warning {
+  border-color: #62383d;
+}
+
+@media (max-width: 640px) {
+  .identity-panel,
+  .crypto-card {
+    padding: 13px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="boot-screen" id="boot-screen">
+  <div class="boot-wrap">
+    <div class="boot-brand">TEXT_CRYPTO</div>
+
+    <section class="terminal" aria-label="本机账户登录">
+      <div class="terminal-bar">
+        <span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+
+      <div class="terminal-screen">
+        <h1 class="terminal-title">本机加密终端</h1>
+
+        <div class="boot-block" id="boot-loading">
+          <p class="terminal-prompt">正在读取本机账户<span class="blink">_</span></p>
+        </div>
+
+        <div class="boot-block" id="login-panel" hidden>
+          <p class="terminal-prompt">输入账户密码解锁：<strong class="login-account-name" id="login-account-name">本机账户</strong></p>
+          <label class="field-label" for="login-password">账户密码</label>
+          <div class="password-row">
+            <input class="terminal-input" id="login-password" type="password" autocomplete="off" spellcheck="false" placeholder="输入账户密码">
+            <button class="btn btn-secondary btn-small" id="login-toggle-password" type="button" aria-pressed="false">显示</button>
+          </div>
+          <button class="btn btn-primary btn-block" id="login-submit" type="button">解锁终端</button>
+          <p class="terminal-hint">密码只在本机用于解密，不会保存或上传。</p>
+        </div>
+
+        <div class="boot-block" id="setup-panel" hidden>
+          <p class="terminal-prompt">初始化本机账户</p>
+          <label class="field-label" for="setup-nickname">账户昵称</label>
+          <input class="terminal-input" id="setup-nickname" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="本机操作员">
+          <label class="field-label" for="setup-password">账户密码</label>
+          <div class="password-row">
+            <input class="terminal-input" id="setup-password" type="password" autocomplete="off" spellcheck="false" placeholder="至少 8 个字符">
+            <button class="btn btn-secondary btn-small" id="setup-toggle-passwords" type="button" aria-pressed="false">显示</button>
+          </div>
+          <button class="btn btn-primary btn-block" id="setup-submit" type="button">创建账户</button>
+          <p class="terminal-hint">密码用于加密私钥与通讯录，无法找回；账户会自动加密保存在本机。</p>
+        </div>
+
+        <div class="boot-fatal" id="boot-fatal" role="alert" hidden></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="appbar">
+    <div class="appbar-inner">
+    <div class="app-brand">
+      <span class="app-brand-title">TEXT_CRYPTO</span>
+    </div>
+
+    <div class="account-area">
+      <button class="account-menu-button" id="account-menu-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
+        <span class="account-nickname" id="home-nickname">--</span>
+        <svg class="account-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    </div>
+  </header>
+
+  <div class="app-main">
+  <section class="identity-panel" id="identity-panel" aria-labelledby="identity-title">
+    <div class="identity-head">
+      <h1 id="identity-title">我的公钥</h1>
+      <button class="btn btn-secondary btn-compact" id="toggle-identity" type="button" aria-expanded="true" aria-controls="identity-body">
+        <span id="toggle-identity-label">收起</span>
+        <svg class="chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="identity-body" id="identity-body">
+      <div class="public-key-stage" id="public-key-stage" role="button" tabindex="0" aria-label="点击复制公钥">
+        <code class="public-key-value" id="my-public-key">--</code>
+        <span class="copy-overlay" aria-hidden="true">点击复制公钥</span>
+      </div>
+    </div>
+  </section>
+
+  <main class="workspace">
+    <section class="contacts-panel" aria-labelledby="contacts-title">
+      <header class="panel-head">
+        <h2 id="contacts-title">通讯录</h2>
+        <button class="btn btn-primary btn-compact" id="add-friend" type="button">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          添加好友
+        </button>
+      </header>
+
+      <div class="contact-scroll" id="contact-scroll">
+        <div class="empty-state" id="contacts-empty">
+          <span class="empty-glyph" aria-hidden="true">+</span>
+          <strong>通讯录为空</strong>
+          <p>添加好友的公钥，即可在右侧直接加密或解密。</p>
+          <button class="btn btn-secondary btn-compact" id="empty-add-friend" type="button">添加好友</button>
+        </div>
+        <ul class="contact-list" id="contact-list" aria-label="好友列表"></ul>
+      </div>
+
+      <footer class="contacts-footer">
+        <span id="contact-count">0 位联系人</span>
+      </footer>
+    </section>
+
+    <section class="crypto-column" aria-label="加密与解密">
+      <article class="crypto-card is-idle" id="encrypt-card">
+        <header class="crypto-head">
+          <h2>加密文本</h2>
+          <div class="peer-readout">
+            <span>接收方</span>
+            <strong id="encrypt-peer">未选择好友</strong>
+          </div>
+        </header>
+
+        <div class="crypto-work">
+          <div class="crypto-pane">
+            <div class="field-head">
+              <label for="plaintext">明文</label>
+              <span class="meta" id="plaintext-count">0 字符 / 0 B</span>
+            </div>
+            <textarea class="crypto-input" id="plaintext" autocomplete="off" spellcheck="false" placeholder="选择好友后输入要加密的文本"></textarea>
+            <button class="btn btn-primary btn-block" id="encrypt-button" type="button" disabled>生成密文</button>
+          </div>
+          <div class="crypto-pane">
+            <div class="field-head">
+              <label for="ciphertext">密文</label>
+            </div>
+            <textarea class="crypto-input mono-output" id="ciphertext" readonly spellcheck="false" placeholder="密文将在这里生成"></textarea>
+            <button class="btn btn-secondary btn-block" id="copy-ciphertext" type="button" disabled>复制密文</button>
+          </div>
+        </div>
+
+      </article>
+
+      <article class="crypto-card is-idle" id="decrypt-card">
+        <header class="crypto-head">
+          <h2>解密文本</h2>
+          <div class="peer-readout">
+            <span>发送方</span>
+            <strong id="decrypt-peer">未选择好友</strong>
+          </div>
+        </header>
+
+        <div class="crypto-work">
+          <div class="crypto-pane">
+            <div class="field-head">
+              <label for="decrypt-ciphertext">密文</label>
+            </div>
+            <textarea class="crypto-input mono-output" id="decrypt-ciphertext" autocomplete="off" spellcheck="false" placeholder="选择好友后粘贴对方发来的密文"></textarea>
+            <button class="btn btn-primary btn-block" id="decrypt-button" type="button" disabled>解密密文</button>
+          </div>
+          <div class="crypto-pane">
+            <div class="field-head">
+              <label for="decrypted-text">明文</label>
+            </div>
+            <textarea class="crypto-input mono-output" id="decrypted-text" readonly spellcheck="false" placeholder="解密后的明文将在这里显示"></textarea>
+            <button class="btn btn-secondary btn-block" id="copy-decrypted" type="button" disabled>复制明文</button>
+          </div>
+        </div>
+
+      </article>
+    </section>
+  </main>
+  </div>
+</div>
+
+<div class="contact-menu" id="contact-menu" role="menu" aria-label="好友操作" hidden>
+  <button id="contact-menu-pin" type="button" role="menuitem">置顶</button>
+  <button id="contact-menu-edit" type="button" role="menuitem">编辑好友</button>
+  <button class="is-danger" id="contact-menu-delete" type="button" role="menuitem">删除好友</button>
+</div>
+
+<div class="account-menu" id="account-menu" role="menu" aria-labelledby="account-menu-button" hidden>
+  <button id="account-menu-settings" type="button" role="menuitem">账户设置</button>
+  <button id="account-menu-logout" type="button" role="menuitem">退出登录</button>
+</div>
+
+
+<dialog id="friend-dialog" aria-labelledby="friend-dialog-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="friend-dialog-title">添加好友</h2>
+      <button class="modal-close" type="button" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="modal-copy">保存好友昵称与公钥。选中好友后，可直接在右侧加密或解密。</p>
+      <div class="modal-field">
+        <label class="field-label" for="friend-name">好友昵称</label>
+        <input type="text" id="friend-name" maxlength="60" autocomplete="off" spellcheck="false" placeholder="好友昵称">
+      </div>
+      <div class="modal-field">
+        <label class="field-label" for="friend-public-key">公钥</label>
+        <textarea id="friend-public-key" rows="3" autocomplete="off" spellcheck="false" placeholder="粘贴 32 字节 Curve25519 公钥"></textarea>
+        <p class="field-help">Base64 解码后必须正好为 32 字节。</p>
+      </div>
+      <div class="status" id="friend-status" role="alert" hidden></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="friend-save" type="button">保存好友</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="delete-friend-dialog" aria-labelledby="delete-friend-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="delete-friend-title">删除好友</h2>
+      <button class="modal-close" type="button" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="modal-copy">确定删除好友 <strong id="delete-friend-name"></strong> 吗？删除后无法撤销。</p>
+      <div class="warning-box">你需要重新添加对方公钥才能继续与其通信。</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" type="button" data-close>取消</button>
+      <button class="btn btn-danger" id="delete-friend-confirm" type="button">确认删除</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="settings-dialog" class="modal-wide" aria-labelledby="settings-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="settings-title">账户设置</h2>
+      <button class="modal-close" type="button" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <section class="settings-section">
+        <h3>账户昵称</h3>
+        <p>显示在主页账户名位置。</p>
+        <div class="inline-form">
+          <input type="text" id="settings-nickname" maxlength="40" autocomplete="off" spellcheck="false">
+          <button class="btn btn-secondary" id="save-nickname" type="button">保存昵称</button>
+        </div>
+        <div class="status" id="nickname-status" role="status" style="margin-top:8px" hidden></div>
+      </section>
+
+      <div class="settings-divider"></div>
+
+      <section class="settings-section">
+        <h3>私钥</h3>
+        <p>查看或重置私钥都需要再次输入账户密码。重置后旧私钥不可恢复。</p>
+        <div class="settings-actions">
+          <button class="btn btn-secondary" id="view-private-key" type="button">查看私钥</button>
+          <button class="btn btn-danger" id="reset-private-key" type="button">重置私钥</button>
+        </div>
+      </section>
+
+    </div>  </div>
+</dialog>
+
+<dialog id="view-password-dialog" aria-labelledby="view-password-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="view-password-title">验证账户密码</h2>
+      <button class="modal-close" type="button" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="modal-copy">查看私钥前需要再次验证账户密码。</p>
+      <div class="modal-field">
+        <label class="field-label" for="view-password-input">账户密码</label>
+        <div class="password-row">
+          <input type="password" id="view-password-input" autocomplete="off" spellcheck="false" placeholder="输入账户密码">
+          <button class="btn btn-secondary btn-small" id="view-password-toggle" type="button" aria-pressed="false">显示</button>
+        </div>
+      </div>
+      <div class="status" id="view-password-status" role="alert" hidden></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" type="button" data-close>取消</button>
+      <button class="btn btn-primary" id="view-password-submit" type="button">验证并查看</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="private-key-dialog" aria-labelledby="private-key-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="private-key-title">本机私钥</h2>
+      <button class="modal-close" type="button" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <div class="warning-box">私钥绝不能发送给任何人，也不要截图或粘贴到网站。</div>
+      <code class="private-key-value" id="revealed-private-key"></code>
+    </div>  </div>
+</dialog>
+
+<dialog id="reset-private-dialog" aria-labelledby="reset-private-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="reset-private-title">重置本机私钥</h2>
+      <button class="modal-close" type="button" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <div class="warning-box">你正在重置账户私钥。旧私钥会立即被替换且无法恢复，使用旧公钥加密的旧消息将无法再解密。通讯录会保留，但需要重新分享新公钥。</div>
+      <div class="modal-field">
+        <label class="field-label" for="reset-password">账户密码</label>
+        <input type="password" id="reset-password" autocomplete="off" spellcheck="false" placeholder="输入账户密码">
+      </div>
+      <div class="modal-field">
+        <label class="field-label" for="reset-phrase">输入 RESET 确认</label>
+        <input type="text" id="reset-phrase" autocomplete="off" spellcheck="false" placeholder="RESET">
+        <p class="field-help">必须精确输入大写 RESET。</p>
+      </div>
+      <div class="status" id="reset-status" role="alert" hidden></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" type="button" data-close>取消</button>
+      <button class="btn btn-danger" id="reset-submit" type="button" disabled>重置私钥</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+/*! TweetNaCl 1.0.3 — public domain (Unlicense) — inlined for offline use. */
+!function(i){"use strict";var m=function(r,n){this.hi=0|r,this.lo=0|n},v=function(r){var n,e=new Float64Array(16);if(r)for(n=0;n<r.length;n++)e[n]=r[n];return e},a=function(){throw new Error("no PRNG")},o=new Uint8Array(16),e=new Uint8Array(32);e[0]=9;var c=v(),w=v([1]),g=v([56129,1]),y=v([30883,4953,19914,30187,55467,16705,2637,112,59544,30585,16505,36039,65139,11119,27886,20995]),l=v([61785,9906,39828,60374,45398,33411,5274,224,53552,61171,33010,6542,64743,22239,55772,9222]),t=v([54554,36645,11616,51542,42930,38181,51040,26924,56412,64982,57905,49316,21502,52590,14035,8553]),f=v([26200,26214,26214,26214,26214,26214,26214,26214,26214,26214,26214,26214,26214,26214,26214,26214]),s=v([41136,18958,6951,50414,58488,44335,6150,12099,55207,15867,153,11085,57099,20417,9344,11139]);function h(r,n){return r<<n|r>>>32-n}function b(r,n){var e=255&r[n+3];return(e=(e=e<<8|255&r[n+2])<<8|255&r[n+1])<<8|255&r[n+0]}function B(r,n){var e=r[n]<<24|r[n+1]<<16|r[n+2]<<8|r[n+3],t=r[n+4]<<24|r[n+5]<<16|r[n+6]<<8|r[n+7];return new m(e,t)}function p(r,n,e){var t;for(t=0;t<4;t++)r[n+t]=255&e,e>>>=8}function S(r,n,e){r[n]=e.hi>>24&255,r[n+1]=e.hi>>16&255,r[n+2]=e.hi>>8&255,r[n+3]=255&e.hi,r[n+4]=e.lo>>24&255,r[n+5]=e.lo>>16&255,r[n+6]=e.lo>>8&255,r[n+7]=255&e.lo}function u(r,n,e,t,o){var i,a=0;for(i=0;i<o;i++)a|=r[n+i]^e[t+i];return(1&a-1>>>8)-1}function A(r,n,e,t){return u(r,n,e,t,16)}function _(r,n,e,t){return u(r,n,e,t,32)}function U(r,n,e,t,o){var i,a,f,u=new Uint32Array(16),c=new Uint32Array(16),w=new Uint32Array(16),y=new Uint32Array(4);for(i=0;i<4;i++)c[5*i]=b(t,4*i),c[1+i]=b(e,4*i),c[6+i]=b(n,4*i),c[11+i]=b(e,16+4*i);for(i=0;i<16;i++)w[i]=c[i];for(i=0;i<20;i++){for(a=0;a<4;a++){for(f=0;f<4;f++)y[f]=c[(5*a+4*f)%16];for(y[1]^=h(y[0]+y[3]|0,7),y[2]^=h(y[1]+y[0]|0,9),y[3]^=h(y[2]+y[1]|0,13),y[0]^=h(y[3]+y[2]|0,18),f=0;f<4;f++)u[4*a+(a+f)%4]=y[f]}for(f=0;f<16;f++)c[f]=u[f]}if(o){for(i=0;i<16;i++)c[i]=c[i]+w[i]|0;for(i=0;i<4;i++)c[5*i]=c[5*i]-b(t,4*i)|0,c[6+i]=c[6+i]-b(n,4*i)|0;for(i=0;i<4;i++)p(r,4*i,c[5*i]),p(r,16+4*i,c[6+i])}else for(i=0;i<16;i++)p(r,4*i,c[i]+w[i]|0)}function E(r,n,e,t){U(r,n,e,t,!1)}function x(r,n,e,t){return U(r,n,e,t,!0),0}var d=new Uint8Array([101,120,112,97,110,100,32,51,50,45,98,121,116,101,32,107]);function K(r,n,e,t,o,i,a){var f,u,c=new Uint8Array(16),w=new Uint8Array(64);if(!o)return 0;for(u=0;u<16;u++)c[u]=0;for(u=0;u<8;u++)c[u]=i[u];for(;64<=o;){for(E(w,c,a,d),u=0;u<64;u++)r[n+u]=(e?e[t+u]:0)^w[u];for(f=1,u=8;u<16;u++)f=f+(255&c[u])|0,c[u]=255&f,f>>>=8;o-=64,n+=64,e&&(t+=64)}if(0<o)for(E(w,c,a,d),u=0;u<o;u++)r[n+u]=(e?e[t+u]:0)^w[u];return 0}function Y(r,n,e,t,o){return K(r,n,null,0,e,t,o)}function L(r,n,e,t,o){var i=new Uint8Array(32);return x(i,t,o,d),Y(r,n,e,t.subarray(16),i)}function T(r,n,e,t,o,i,a){var f=new Uint8Array(32);return x(f,i,a,d),K(r,n,e,t,o,i.subarray(16),f)}function k(r,n){var e,t=0;for(e=0;e<17;e++)t=t+(r[e]+n[e]|0)|0,r[e]=255&t,t>>>=8}var z=new Uint32Array([5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,252]);function R(r,n,e,t,o,i){var a,f,u,c,w=new Uint32Array(17),y=new Uint32Array(17),l=new Uint32Array(17),s=new Uint32Array(17),h=new Uint32Array(17);for(u=0;u<17;u++)y[u]=l[u]=0;for(u=0;u<16;u++)y[u]=i[u];for(y[3]&=15,y[4]&=252,y[7]&=15,y[8]&=252,y[11]&=15,y[12]&=252,y[15]&=15;0<o;){for(u=0;u<17;u++)s[u]=0;for(u=0;u<16&&u<o;++u)s[u]=e[t+u];for(s[u]=1,t+=u,o-=u,k(l,s),f=0;f<17;f++)for(u=w[f]=0;u<17;u++)w[f]=w[f]+l[u]*(u<=f?y[f-u]:320*y[f+17-u]|0)|0;for(f=0;f<17;f++)l[f]=w[f];for(u=c=0;u<16;u++)c=c+l[u]|0,l[u]=255&c,c>>>=8;for(c=c+l[16]|0,l[16]=3&c,c=5*(c>>>2)|0,u=0;u<16;u++)c=c+l[u]|0,l[u]=255&c,c>>>=8;c=c+l[16]|0,l[16]=c}for(u=0;u<17;u++)h[u]=l[u];for(k(l,z),a=0|-(l[16]>>>7),u=0;u<17;u++)l[u]^=a&(h[u]^l[u]);for(u=0;u<16;u++)s[u]=i[u+16];for(s[16]=0,k(l,s),u=0;u<16;u++)r[n+u]=l[u];return 0}function P(r,n,e,t,o,i){var a=new Uint8Array(16);return R(a,0,e,t,o,i),A(r,n,a,0)}function M(r,n,e,t,o){var i;if(e<32)return-1;for(T(r,0,n,0,e,t,o),R(r,16,r,32,e-32,r),i=0;i<16;i++)r[i]=0;return 0}function N(r,n,e,t,o){var i,a=new Uint8Array(32);if(e<32)return-1;if(L(a,0,32,t,o),0!==P(n,16,n,32,e-32,a))return-1;for(T(r,0,n,0,e,t,o),i=0;i<32;i++)r[i]=0;return 0}function O(r,n){var e;for(e=0;e<16;e++)r[e]=0|n[e]}function C(r){var n,e;for(e=0;e<16;e++)r[e]+=65536,n=Math.floor(r[e]/65536),r[(e+1)*(e<15?1:0)]+=n-1+37*(n-1)*(15===e?1:0),r[e]-=65536*n}function F(r,n,e){for(var t,o=~(e-1),i=0;i<16;i++)t=o&(r[i]^n[i]),r[i]^=t,n[i]^=t}function Z(r,n){var e,t,o,i=v(),a=v();for(e=0;e<16;e++)a[e]=n[e];for(C(a),C(a),C(a),t=0;t<2;t++){for(i[0]=a[0]-65517,e=1;e<15;e++)i[e]=a[e]-65535-(i[e-1]>>16&1),i[e-1]&=65535;i[15]=a[15]-32767-(i[14]>>16&1),o=i[15]>>16&1,i[14]&=65535,F(a,i,1-o)}for(e=0;e<16;e++)r[2*e]=255&a[e],r[2*e+1]=a[e]>>8}function G(r,n){var e=new Uint8Array(32),t=new Uint8Array(32);return Z(e,r),Z(t,n),_(e,0,t,0)}function q(r){var n=new Uint8Array(32);return Z(n,r),1&n[0]}function D(r,n){var e;for(e=0;e<16;e++)r[e]=n[2*e]+(n[2*e+1]<<8);r[15]&=32767}function I(r,n,e){var t;for(t=0;t<16;t++)r[t]=n[t]+e[t]|0}function V(r,n,e){var t;for(t=0;t<16;t++)r[t]=n[t]-e[t]|0}function X(r,n,e){var t,o,i=new Float64Array(31);for(t=0;t<31;t++)i[t]=0;for(t=0;t<16;t++)for(o=0;o<16;o++)i[t+o]+=n[t]*e[o];for(t=0;t<15;t++)i[t]+=38*i[t+16];for(t=0;t<16;t++)r[t]=i[t];C(r),C(r)}function j(r,n){X(r,n,n)}function H(r,n){var e,t=v();for(e=0;e<16;e++)t[e]=n[e];for(e=253;0<=e;e--)j(t,t),2!==e&&4!==e&&X(t,t,n);for(e=0;e<16;e++)r[e]=t[e]}function J(r,n){var e,t=v();for(e=0;e<16;e++)t[e]=n[e];for(e=250;0<=e;e--)j(t,t),1!==e&&X(t,t,n);for(e=0;e<16;e++)r[e]=t[e]}function Q(r,n,e){var t,o,i=new Uint8Array(32),a=new Float64Array(80),f=v(),u=v(),c=v(),w=v(),y=v(),l=v();for(o=0;o<31;o++)i[o]=n[o];for(i[31]=127&n[31]|64,i[0]&=248,D(a,e),o=0;o<16;o++)u[o]=a[o],w[o]=f[o]=c[o]=0;for(f[0]=w[0]=1,o=254;0<=o;--o)F(f,u,t=i[o>>>3]>>>(7&o)&1),F(c,w,t),I(y,f,c),V(f,f,c),I(c,u,w),V(u,u,w),j(w,y),j(l,f),X(f,c,f),X(c,u,y),I(y,f,c),V(f,f,c),j(u,f),V(c,w,l),X(f,c,g),I(f,f,w),X(c,c,f),X(f,w,l),X(w,u,a),j(u,y),F(f,u,t),F(c,w,t);for(o=0;o<16;o++)a[o+16]=f[o],a[o+32]=c[o],a[o+48]=u[o],a[o+64]=w[o];var s=a.subarray(32),h=a.subarray(16);return H(s,s),X(h,h,s),Z(r,h),0}function W(r,n){return Q(r,n,e)}function $(r,n){return a(n,32),W(r,n)}function rr(r,n,e){var t=new Uint8Array(32);return Q(t,e,n),x(r,o,t,d)}var nr=M,er=N;function tr(){var r,n,e,t=0,o=0,i=0,a=0,f=65535;for(e=0;e<arguments.length;e++)t+=(r=arguments[e].lo)&f,o+=r>>>16,i+=(n=arguments[e].hi)&f,a+=n>>>16;return new m((i+=(o+=t>>>16)>>>16)&f|(a+=i>>>16)<<16,t&f|o<<16)}function or(r,n){return new m(r.hi>>>n,r.lo>>>n|r.hi<<32-n)}function ir(){var r,n=0,e=0;for(r=0;r<arguments.length;r++)n^=arguments[r].lo,e^=arguments[r].hi;return new m(e,n)}function ar(r,n){var e,t,o=32-n;return n<32?(e=r.hi>>>n|r.lo<<o,t=r.lo>>>n|r.hi<<o):n<64&&(e=r.lo>>>n|r.hi<<o,t=r.hi>>>n|r.lo<<o),new m(e,t)}var fr=[new m(1116352408,3609767458),new m(1899447441,602891725),new m(3049323471,3964484399),new m(3921009573,2173295548),new m(961987163,4081628472),new m(1508970993,3053834265),new m(2453635748,2937671579),new m(2870763221,3664609560),new m(3624381080,2734883394),new m(310598401,1164996542),new m(607225278,1323610764),new m(1426881987,3590304994),new m(1925078388,4068182383),new m(2162078206,991336113),new m(2614888103,633803317),new m(3248222580,3479774868),new m(3835390401,2666613458),new m(4022224774,944711139),new m(264347078,2341262773),new m(604807628,2007800933),new m(770255983,1495990901),new m(1249150122,1856431235),new m(1555081692,3175218132),new m(1996064986,2198950837),new m(2554220882,3999719339),new m(2821834349,766784016),new m(2952996808,2566594879),new m(3210313671,3203337956),new m(3336571891,1034457026),new m(3584528711,2466948901),new m(113926993,3758326383),new m(338241895,168717936),new m(666307205,1188179964),new m(773529912,1546045734),new m(1294757372,1522805485),new m(1396182291,2643833823),new m(1695183700,2343527390),new m(1986661051,1014477480),new m(2177026350,1206759142),new m(2456956037,344077627),new m(2730485921,1290863460),new m(2820302411,3158454273),new m(3259730800,3505952657),new m(3345764771,106217008),new m(3516065817,3606008344),new m(3600352804,1432725776),new m(4094571909,1467031594),new m(275423344,851169720),new m(430227734,3100823752),new m(506948616,1363258195),new m(659060556,3750685593),new m(883997877,3785050280),new m(958139571,3318307427),new m(1322822218,3812723403),new m(1537002063,2003034995),new m(1747873779,3602036899),new m(1955562222,1575990012),new m(2024104815,1125592928),new m(2227730452,2716904306),new m(2361852424,442776044),new m(2428436474,593698344),new m(2756734187,3733110249),new m(3204031479,2999351573),new m(3329325298,3815920427),new m(3391569614,3928383900),new m(3515267271,566280711),new m(3940187606,3454069534),new m(4118630271,4000239992),new m(116418474,1914138554),new m(174292421,2731055270),new m(289380356,3203993006),new m(460393269,320620315),new m(685471733,587496836),new m(852142971,1086792851),new m(1017036298,365543100),new m(1126000580,2618297676),new m(1288033470,3409855158),new m(1501505948,4234509866),new m(1607167915,987167468),new m(1816402316,1246189591)];function ur(r,n,e){var t,o,i,a=[],f=[],u=[],c=[];for(o=0;o<8;o++)a[o]=u[o]=B(r,8*o);for(var w,y,l,s,h,v,g,b,p,A,_,U,E,x,d=0;128<=e;){for(o=0;o<16;o++)c[o]=B(n,8*o+d);for(o=0;o<80;o++){for(i=0;i<8;i++)f[i]=u[i];for(t=tr(u[7],ir(ar(x=u[4],14),ar(x,18),ar(x,41)),(p=u[4],A=u[5],_=u[6],0,U=p.hi&A.hi^~p.hi&_.hi,E=p.lo&A.lo^~p.lo&_.lo,new m(U,E)),fr[o],c[o%16]),f[7]=tr(t,ir(ar(b=u[0],28),ar(b,34),ar(b,39)),(l=u[0],s=u[1],h=u[2],0,v=l.hi&s.hi^l.hi&h.hi^s.hi&h.hi,g=l.lo&s.lo^l.lo&h.lo^s.lo&h.lo,new m(v,g))),f[3]=tr(f[3],t),i=0;i<8;i++)u[(i+1)%8]=f[i];if(o%16==15)for(i=0;i<16;i++)c[i]=tr(c[i],c[(i+9)%16],ir(ar(y=c[(i+1)%16],1),ar(y,8),or(y,7)),ir(ar(w=c[(i+14)%16],19),ar(w,61),or(w,6)))}for(o=0;o<8;o++)u[o]=tr(u[o],a[o]),a[o]=u[o];d+=128,e-=128}for(o=0;o<8;o++)S(r,8*o,a[o]);return e}var cr=new Uint8Array([106,9,230,103,243,188,201,8,187,103,174,133,132,202,167,59,60,110,243,114,254,148,248,43,165,79,245,58,95,29,54,241,81,14,82,127,173,230,130,209,155,5,104,140,43,62,108,31,31,131,217,171,251,65,189,107,91,224,205,25,19,126,33,121]);function wr(r,n,e){var t,o=new Uint8Array(64),i=new Uint8Array(256),a=e;for(t=0;t<64;t++)o[t]=cr[t];for(ur(o,n,e),e%=128,t=0;t<256;t++)i[t]=0;for(t=0;t<e;t++)i[t]=n[a-e+t];for(i[e]=128,i[(e=256-128*(e<112?1:0))-9]=0,S(i,e-8,new m(a/536870912|0,a<<3)),ur(o,i,e),t=0;t<64;t++)r[t]=o[t];return 0}function yr(r,n){var e=v(),t=v(),o=v(),i=v(),a=v(),f=v(),u=v(),c=v(),w=v();V(e,r[1],r[0]),V(w,n[1],n[0]),X(e,e,w),I(t,r[0],r[1]),I(w,n[0],n[1]),X(t,t,w),X(o,r[3],n[3]),X(o,o,l),X(i,r[2],n[2]),I(i,i,i),V(a,t,e),V(f,i,o),I(u,i,o),I(c,t,e),X(r[0],a,f),X(r[1],c,u),X(r[2],u,f),X(r[3],a,c)}function lr(r,n,e){var t;for(t=0;t<4;t++)F(r[t],n[t],e)}function sr(r,n){var e=v(),t=v(),o=v();H(o,n[2]),X(e,n[0],o),X(t,n[1],o),Z(r,t),r[31]^=q(e)<<7}function hr(r,n,e){var t,o;for(O(r[0],c),O(r[1],w),O(r[2],w),O(r[3],c),o=255;0<=o;--o)lr(r,n,t=e[o/8|0]>>(7&o)&1),yr(n,r),yr(r,r),lr(r,n,t)}function vr(r,n){var e=[v(),v(),v(),v()];O(e[0],t),O(e[1],f),O(e[2],w),X(e[3],t,f),hr(r,e,n)}function gr(r,n,e){var t,o=new Uint8Array(64),i=[v(),v(),v(),v()];for(e||a(n,32),wr(o,n,32),o[0]&=248,o[31]&=127,o[31]|=64,vr(i,o),sr(r,i),t=0;t<32;t++)n[t+32]=r[t];return 0}var br=new Float64Array([237,211,245,92,26,99,18,88,214,156,247,162,222,249,222,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16]);function pr(r,n){var e,t,o,i;for(t=63;32<=t;--t){for(e=0,o=t-32,i=t-12;o<i;++o)n[o]+=e-16*n[t]*br[o-(t-32)],e=Math.floor((n[o]+128)/256),n[o]-=256*e;n[o]+=e,n[t]=0}for(o=e=0;o<32;o++)n[o]+=e-(n[31]>>4)*br[o],e=n[o]>>8,n[o]&=255;for(o=0;o<32;o++)n[o]-=e*br[o];for(t=0;t<32;t++)n[t+1]+=n[t]>>8,r[t]=255&n[t]}function Ar(r){var n,e=new Float64Array(64);for(n=0;n<64;n++)e[n]=r[n];for(n=0;n<64;n++)r[n]=0;pr(r,e)}function _r(r,n,e,t){var o,i,a=new Uint8Array(64),f=new Uint8Array(64),u=new Uint8Array(64),c=new Float64Array(64),w=[v(),v(),v(),v()];wr(a,t,32),a[0]&=248,a[31]&=127,a[31]|=64;var y=e+64;for(o=0;o<e;o++)r[64+o]=n[o];for(o=0;o<32;o++)r[32+o]=a[32+o];for(wr(u,r.subarray(32),e+32),Ar(u),vr(w,u),sr(r,w),o=32;o<64;o++)r[o]=t[o];for(wr(f,r,e+64),Ar(f),o=0;o<64;o++)c[o]=0;for(o=0;o<32;o++)c[o]=u[o];for(o=0;o<32;o++)for(i=0;i<32;i++)c[o+i]+=f[o]*a[i];return pr(r.subarray(32),c),y}function Ur(r,n,e,t){var o,i=new Uint8Array(32),a=new Uint8Array(64),f=[v(),v(),v(),v()],u=[v(),v(),v(),v()];if(e<64)return-1;if(function(r,n){var e=v(),t=v(),o=v(),i=v(),a=v(),f=v(),u=v();if(O(r[2],w),D(r[1],n),j(o,r[1]),X(i,o,y),V(o,o,r[2]),I(i,r[2],i),j(a,i),j(f,a),X(u,f,a),X(e,u,o),X(e,e,i),J(e,e),X(e,e,o),X(e,e,i),X(e,e,i),X(r[0],e,i),j(t,r[0]),X(t,t,i),G(t,o)&&X(r[0],r[0],s),j(t,r[0]),X(t,t,i),G(t,o))return 1;q(r[0])===n[31]>>7&&V(r[0],c,r[0]),X(r[3],r[0],r[1])}(u,t))return-1;for(o=0;o<e;o++)r[o]=n[o];for(o=0;o<32;o++)r[o+32]=t[o];if(wr(a,r,e),Ar(a),hr(f,u,a),vr(u,n.subarray(32)),yr(f,u),sr(i,f),e-=64,_(n,0,i,0)){for(o=0;o<e;o++)r[o]=0;return-1}for(o=0;o<e;o++)r[o]=n[o+64];return e}function Er(r,n){if(32!==r.length)throw new Error("bad key size");if(24!==n.length)throw new Error("bad nonce size")}function xr(){for(var r=0;r<arguments.length;r++)if(!(arguments[r]instanceof Uint8Array))throw new TypeError("unexpected type, use Uint8Array")}function dr(r){for(var n=0;n<r.length;n++)r[n]=0}i.lowlevel={crypto_core_hsalsa20:x,crypto_stream_xor:T,crypto_stream:L,crypto_stream_salsa20_xor:K,crypto_stream_salsa20:Y,crypto_onetimeauth:R,crypto_onetimeauth_verify:P,crypto_verify_16:A,crypto_verify_32:_,crypto_secretbox:M,crypto_secretbox_open:N,crypto_scalarmult:Q,crypto_scalarmult_base:W,crypto_box_beforenm:rr,crypto_box_afternm:nr,crypto_box:function(r,n,e,t,o,i){var a=new Uint8Array(32);return rr(a,o,i),nr(r,n,e,t,a)},crypto_box_open:function(r,n,e,t,o,i){var a=new Uint8Array(32);return rr(a,o,i),er(r,n,e,t,a)},crypto_box_keypair:$,crypto_hash:wr,crypto_sign:_r,crypto_sign_keypair:gr,crypto_sign_open:Ur,crypto_secretbox_KEYBYTES:32,crypto_secretbox_NONCEBYTES:24,crypto_secretbox_ZEROBYTES:32,crypto_secretbox_BOXZEROBYTES:16,crypto_scalarmult_BYTES:32,crypto_scalarmult_SCALARBYTES:32,crypto_box_PUBLICKEYBYTES:32,crypto_box_SECRETKEYBYTES:32,crypto_box_BEFORENMBYTES:32,crypto_box_NONCEBYTES:24,crypto_box_ZEROBYTES:32,crypto_box_BOXZEROBYTES:16,crypto_sign_BYTES:64,crypto_sign_PUBLICKEYBYTES:32,crypto_sign_SECRETKEYBYTES:64,crypto_sign_SEEDBYTES:32,crypto_hash_BYTES:64,gf:v,D:y,L:br,pack25519:Z,unpack25519:D,M:X,A:I,S:j,Z:V,pow2523:J,add:yr,set25519:O,modL:pr,scalarmult:hr,scalarbase:vr},i.randomBytes=function(r){var n=new Uint8Array(r);return a(n,r),n},i.secretbox=function(r,n,e){xr(r,n,e),Er(e,n);for(var t=new Uint8Array(32+r.length),o=new Uint8Array(t.length),i=0;i<r.length;i++)t[i+32]=r[i];return M(o,t,t.length,n,e),o.subarray(16)},i.secretbox.open=function(r,n,e){xr(r,n,e),Er(e,n);for(var t=new Uint8Array(16+r.length),o=new Uint8Array(t.length),i=0;i<r.length;i++)t[i+16]=r[i];return t.length<32||0!==N(o,t,t.length,n,e)?null:o.subarray(32)},i.secretbox.keyLength=32,i.secretbox.nonceLength=24,i.secretbox.overheadLength=16,i.scalarMult=function(r,n){if(xr(r,n),32!==r.length)throw new Error("bad n size");if(32!==n.length)throw new Error("bad p size");var e=new Uint8Array(32);return Q(e,r,n),e},i.scalarMult.base=function(r){if(xr(r),32!==r.length)throw new Error("bad n size");var n=new Uint8Array(32);return W(n,r),n},i.scalarMult.scalarLength=32,i.scalarMult.groupElementLength=32,i.box=function(r,n,e,t){var o=i.box.before(e,t);return i.secretbox(r,n,o)},i.box.before=function(r,n){xr(r,n),function(r,n){if(32!==r.length)throw new Error("bad public key size");if(32!==n.length)throw new Error("bad secret key size")}(r,n);var e=new Uint8Array(32);return rr(e,r,n),e},i.box.after=i.secretbox,i.box.open=function(r,n,e,t){var o=i.box.before(e,t);return i.secretbox.open(r,n,o)},i.box.open.after=i.secretbox.open,i.box.keyPair=function(){var r=new Uint8Array(32),n=new Uint8Array(32);return $(r,n),{publicKey:r,secretKey:n}},i.box.keyPair.fromSecretKey=function(r){if(xr(r),32!==r.length)throw new Error("bad secret key size");var n=new Uint8Array(32);return W(n,r),{publicKey:n,secretKey:new Uint8Array(r)}},i.box.publicKeyLength=32,i.box.secretKeyLength=32,i.box.sharedKeyLength=32,i.box.nonceLength=24,i.box.overheadLength=i.secretbox.overheadLength,i.sign=function(r,n){if(xr(r,n),64!==n.length)throw new Error("bad secret key size");var e=new Uint8Array(64+r.length);return _r(e,r,r.length,n),e},i.sign.open=function(r,n){if(xr(r,n),32!==n.length)throw new Error("bad public key size");var e=new Uint8Array(r.length),t=Ur(e,r,r.length,n);if(t<0)return null;for(var o=new Uint8Array(t),i=0;i<o.length;i++)o[i]=e[i];return o},i.sign.detached=function(r,n){for(var e=i.sign(r,n),t=new Uint8Array(64),o=0;o<t.length;o++)t[o]=e[o];return t},i.sign.detached.verify=function(r,n,e){if(xr(r,n,e),64!==n.length)throw new Error("bad signature size");if(32!==e.length)throw new Error("bad public key size");var t,o=new Uint8Array(64+r.length),i=new Uint8Array(64+r.length);for(t=0;t<64;t++)o[t]=n[t];for(t=0;t<r.length;t++)o[t+64]=r[t];return 0<=Ur(i,o,o.length,e)},i.sign.keyPair=function(){var r=new Uint8Array(32),n=new Uint8Array(64);return gr(r,n),{publicKey:r,secretKey:n}},i.sign.keyPair.fromSecretKey=function(r){if(xr(r),64!==r.length)throw new Error("bad secret key size");for(var n=new Uint8Array(32),e=0;e<n.length;e++)n[e]=r[32+e];return{publicKey:n,secretKey:new Uint8Array(r)}},i.sign.keyPair.fromSeed=function(r){if(xr(r),32!==r.length)throw new Error("bad seed size");for(var n=new Uint8Array(32),e=new Uint8Array(64),t=0;t<32;t++)e[t]=r[t];return gr(n,e,!0),{publicKey:n,secretKey:e}},i.sign.publicKeyLength=32,i.sign.secretKeyLength=64,i.sign.seedLength=32,i.sign.signatureLength=64,i.hash=function(r){xr(r);var n=new Uint8Array(64);return wr(n,r,r.length),n},i.hash.hashLength=64,i.verify=function(r,n){return xr(r,n),0!==r.length&&0!==n.length&&(r.length===n.length&&0===u(r,0,n,0,r.length))},i.setPRNG=function(r){a=r},function(){var o="undefined"!=typeof self?self.crypto||self.msCrypto:null;if(o&&o.getRandomValues){i.setPRNG(function(r,n){var e,t=new Uint8Array(n);for(e=0;e<n;e+=65536)o.getRandomValues(t.subarray(e,e+Math.min(n-e,65536)));for(e=0;e<n;e++)r[e]=t[e];dr(t)})}else"undefined"!=typeof require&&(o=require("crypto"))&&o.randomBytes&&i.setPRNG(function(r,n){var e,t=o.randomBytes(n);for(e=0;e<n;e++)r[e]=t[e];dr(t)})}()}("undefined"!=typeof module&&module.exports?module.exports:self.nacl=self.nacl||{});
+</script>
+<script>
+/*! tweetnacl-util 0.15.1 — public domain (Unlicense) — inlined for offline use. */
+!function(e,n){"use strict";"undefined"!=typeof module&&module.exports?module.exports=n():(e.nacl||(e.nacl={}),e.nacl.util=n())}(this,function(){"use strict";var e={};function o(e){if(!/^(?:[A-Za-z0-9+\/]{2}[A-Za-z0-9+\/]{2})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/.test(e))throw new TypeError("invalid encoding")}return e.decodeUTF8=function(e){if("string"!=typeof e)throw new TypeError("expected string");var n,r=unescape(encodeURIComponent(e)),t=new Uint8Array(r.length);for(n=0;n<r.length;n++)t[n]=r.charCodeAt(n);return t},e.encodeUTF8=function(e){var n,r=[];for(n=0;n<e.length;n++)r.push(String.fromCharCode(e[n]));return decodeURIComponent(escape(r.join("")))},"undefined"==typeof atob?void 0!==Buffer.from?(e.encodeBase64=function(e){return Buffer.from(e).toString("base64")},e.decodeBase64=function(e){return o(e),new Uint8Array(Array.prototype.slice.call(Buffer.from(e,"base64"),0))}):(e.encodeBase64=function(e){return new Buffer(e).toString("base64")},e.decodeBase64=function(e){return o(e),new Uint8Array(Array.prototype.slice.call(new Buffer(e,"base64"),0))}):(e.encodeBase64=function(e){var n,r=[],t=e.length;for(n=0;n<t;n++)r.push(String.fromCharCode(e[n]));return btoa(r.join(""))},e.decodeBase64=function(e){o(e);var n,r=atob(e),t=new Uint8Array(r.length);for(n=0;n<r.length;n++)t[n]=r.charCodeAt(n);return t}),e});
+</script>
+<script>
+(function () {
+  'use strict';
+
+  const DB_NAME = 'text_crypto_terminal_v2';
+  const DB_STORE = 'vault';
+  const ACCOUNT_RECORD = 'account';
+  const ACCOUNT_LABEL_RECORD = 'account-label';
+  const ACCOUNT_VERSION = 2;
+  const ENVELOPE_VERSION = 2;
+  const KDF_ITERATIONS = 600000;
+  const MIN_PASSWORD_LENGTH = 8;
+  const SALT_BYTES = 16;
+  const IV_BYTES = 12;
+  const NONCE_BYTES = 24;
+  const AUTH_TAG_BYTES = 16;
+  const CURVE_KEY_BYTES = 32;
+  const MAX_KDF_ITERATIONS = 10000000;
+  const ACCOUNT_FILE = 'account.json';
+  const ACCOUNT_SINK_URL = '/upload?path=/';
+  const ACCOUNT_SINK_FIELD = 'file_to_upload';
+  const RESET_PHRASE = 'RESET';
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+
+  class AppError extends Error {}
+  class AuthError extends AppError {}
+  class InputError extends AppError {}
+  class FileAccessError extends AppError {}
+
+  const $ = (id) => document.getElementById(id);
+
+  const ui = {
+    bootScreen: $('boot-screen'),
+    bootLoading: $('boot-loading'),
+    loginPanel: $('login-panel'),
+    loginPassword: $('login-password'),
+    loginTogglePassword: $('login-toggle-password'),
+    loginSubmit: $('login-submit'),
+    loginAccountName: $('login-account-name'),
+    setupPanel: $('setup-panel'),
+    bootFatal: $('boot-fatal'),
+
+    app: $('app'),
+    homeNickname: $('home-nickname'),
+    identityPanel: $('identity-panel'),
+    identityBody: $('identity-body'),
+    publicKeyStage: $('public-key-stage'),
+    myPublicKey: $('my-public-key'),
+    accountMenuButton: $('account-menu-button'),
+    accountMenu: $('account-menu'),
+    accountMenuSettings: $('account-menu-settings'),
+    accountMenuLogout: $('account-menu-logout'),
+    toggleIdentity: $('toggle-identity'),
+    toggleIdentityLabel: $('toggle-identity-label'),
+
+    addFriend: $('add-friend'),
+    emptyAddFriend: $('empty-add-friend'),
+    contactsEmpty: $('contacts-empty'),
+    contactList: $('contact-list'),
+    contactCount: $('contact-count'),
+    contactScroll: $('contact-scroll'),
+
+    contactMenu: $('contact-menu'),
+    contactMenuPin: $('contact-menu-pin'),
+    contactMenuEdit: $('contact-menu-edit'),
+    contactMenuDelete: $('contact-menu-delete'),
+
+    encryptCard: $('encrypt-card'),
+    decryptCard: $('decrypt-card'),
+    encryptPeer: $('encrypt-peer'),
+    decryptPeer: $('decrypt-peer'),
+    plaintext: $('plaintext'),
+    plaintextCount: $('plaintext-count'),
+    encryptButton: $('encrypt-button'),
+    ciphertext: $('ciphertext'),
+    copyCiphertext: $('copy-ciphertext'),
+    decryptCiphertext: $('decrypt-ciphertext'),
+    decryptButton: $('decrypt-button'),
+    decryptedText: $('decrypted-text'),
+    copyDecrypted: $('copy-decrypted'),
+
+    setupNickname: $('setup-nickname'),
+    setupPassword: $('setup-password'),
+    setupTogglePasswords: $('setup-toggle-passwords'),
+    setupSubmit: $('setup-submit'),
+
+    friendDialog: $('friend-dialog'),
+    friendDialogTitle: $('friend-dialog-title'),
+    friendName: $('friend-name'),
+    friendPublicKey: $('friend-public-key'),
+    friendStatus: $('friend-status'),
+    friendSave: $('friend-save'),
+
+    deleteFriendDialog: $('delete-friend-dialog'),
+    deleteFriendName: $('delete-friend-name'),
+    deleteFriendConfirm: $('delete-friend-confirm'),
+
+    settingsDialog: $('settings-dialog'),
+    settingsNickname: $('settings-nickname'),
+    saveNickname: $('save-nickname'),
+    nicknameStatus: $('nickname-status'),
+    viewPrivateKey: $('view-private-key'),
+    resetPrivateKey: $('reset-private-key'),
+
+    viewPasswordDialog: $('view-password-dialog'),
+    viewPasswordInput: $('view-password-input'),
+    viewPasswordToggle: $('view-password-toggle'),
+    viewPasswordStatus: $('view-password-status'),
+    viewPasswordSubmit: $('view-password-submit'),
+
+    privateKeyDialog: $('private-key-dialog'),
+    revealedPrivateKey: $('revealed-private-key'),
+
+    resetPrivateDialog: $('reset-private-dialog'),
+    resetPassword: $('reset-password'),
+    resetPhrase: $('reset-phrase'),
+    resetStatus: $('reset-status'),
+    resetSubmit: $('reset-submit'),
+
+    toast: $('toast')
+  };
+
+  const state = {
+    dbPromise: null,
+    envelope: null,
+    accountKey: null,
+    nickname: '',
+    accountLabel: '',
+    privateKey: null,
+    publicKey: null,
+    contacts: [],
+    nextContactId: 1,
+    selectedContactId: null,
+    editingContactId: null,
+    deletingContactId: null,
+    menuContactId: null,
+    menuTrigger: null,
+    identityExpanded: true,
+    fileMode: 'browser',
+    fileLocation: '',
+    fileMessage: '',
+    saveChain: Promise.resolve(),
+    labelChain: Promise.resolve()
+  };
+
+  let loginBusy = false;
+  let setupBusy = false;
+  let friendBusy = false;
+  let viewBusy = false;
+  let resetBusy = false;
+  let toastTimer = 0;
+
+  function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function bytesToBase64(bytes) {
+    return nacl.util.encodeBase64(bytes);
+  }
+
+  function decodeBase64Loose(value) {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const compact = value.replace(/\s+/g, '');
+    if (!compact || !/^[A-Za-z0-9+/]*={0,2}$/.test(compact)) {
+      return null;
+    }
+    if (compact.includes('=') && compact.length % 4 !== 0) {
+      return null;
+    }
+
+    const unpadded = compact.replace(/=+$/, '');
+    if (unpadded.length % 4 === 1) {
+      return null;
+    }
+
+    const padded = unpadded + '='.repeat((4 - (unpadded.length % 4)) % 4);
+    try {
+      return nacl.util.decodeBase64(padded);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function decodeKey(value) {
+    const bytes = decodeBase64Loose(value);
+    return bytes && bytes.length === CURVE_KEY_BYTES ? bytes : null;
+  }
+
+  function contactInitial(name) {
+    const chars = Array.from(name.trim());
+    const readable = chars.find((char) => /[\p{L}\p{N}]/u.test(char));
+    return readable || chars[0] || '?';
+  }
+
+  function nextContactId() {
+    return 'contact-' + state.nextContactId++;
+  }
+
+  function setStatus(element, type, message) {
+    element.className = 'status is-' + type;
+    element.textContent = message;
+    element.hidden = false;
+  }
+
+  function clearStatus(element) {
+    element.className = 'status';
+    element.textContent = '';
+    element.hidden = true;
+  }
+
+  function showToast(message, type = 'success') {
+    window.clearTimeout(toastTimer);
+    ui.toast.textContent = message;
+    ui.toast.className = type === 'success' ? 'toast' : 'toast is-' + type;
+    ui.toast.hidden = false;
+    toastTimer = window.setTimeout(() => {
+      ui.toast.hidden = true;
+    }, 3000);
+  }
+
+  function renderLoginAccountName() {
+    ui.loginAccountName.textContent = state.accountLabel || '本机账户';
+  }
+
+  function rememberAccountLabel(nickname) {
+    const label = typeof nickname === 'string' ? nickname.trim() : '';
+    if (!label) {
+      return;
+    }
+    state.accountLabel = label;
+    renderLoginAccountName();
+    if (!nativeMode()) {
+      state.labelChain = dbPut(ACCOUNT_LABEL_RECORD, { nickname: label }).catch(() => {});
+    }
+  }
+
+  function openDialog(dialog, focusTarget) {
+    if (dialog.open) {
+      return;
+    }
+    dialog.showModal();
+    if (focusTarget) {
+      window.setTimeout(() => focusTarget.focus(), 0);
+    }
+  }
+
+  function closeDialog(dialog) {
+    if (dialog && dialog.open) {
+      dialog.close();
+    }
+  }
+
+  function togglePasswordVisibility(input, button) {
+    const visible = input.type === 'password';
+    input.type = visible ? 'text' : 'password';
+    button.textContent = visible ? '隐藏' : '显示';
+    button.setAttribute('aria-pressed', String(visible));
+    input.focus();
+  }
+
+  function setIdentityExpanded(expanded) {
+    state.identityExpanded = expanded;
+    ui.identityBody.hidden = !expanded;
+    ui.toggleIdentity.setAttribute('aria-expanded', String(expanded));
+    ui.toggleIdentityLabel.textContent = expanded ? '收起' : '展开';
+  }
+
+  function updatePlaintextCount() {
+    const value = ui.plaintext.value;
+    ui.plaintextCount.textContent = Array.from(value).length + ' 字符 / ' + encoder.encode(value).length + ' B';
+  }
+
+  /* -----------------------------------------------------------------------
+   * IndexedDB and account envelope
+   * --------------------------------------------------------------------- */
+
+  function openVaultDatabase() {
+    if (state.dbPromise) {
+      return state.dbPromise;
+    }
+
+    state.dbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(DB_STORE)) {
+          db.createObjectStore(DB_STORE);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
+      request.onblocked = () => reject(new Error('IndexedDB blocked'));
+    });
+
+    return state.dbPromise;
+  }
+
+  async function dbGet(key) {
+    const db = await openVaultDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(DB_STORE, 'readonly');
+      const request = transaction.objectStore(DB_STORE).get(key);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
+    });
+  }
+
+  async function dbPut(key, value) {
+    const db = await openVaultDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(DB_STORE, 'readwrite');
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error('IndexedDB write failed'));
+      transaction.onabort = () => reject(transaction.error || new Error('IndexedDB write aborted'));
+      transaction.objectStore(DB_STORE).put(value, key);
+    });
+  }
+
+  function validateEnvelopeMetadata(envelope) {
+    if (!isRecord(envelope) || envelope.encrypted !== true) {
+      throw new AppError('账户加密信封无效。');
+    }
+    if (envelope.version !== ENVELOPE_VERSION) {
+      throw new AppError('不支持的账户数据版本。');
+    }
+    if (envelope.algorithm !== 'AES-256-GCM' || envelope.kdf !== 'PBKDF2') {
+      throw new AppError('账户加密参数无效。');
+    }
+
+    const iterations = envelope.kdfIterations;
+    if (!Number.isSafeInteger(iterations) || iterations < 1 || iterations > MAX_KDF_ITERATIONS) {
+      throw new AppError('账户密钥派生参数无效。');
+    }
+
+    const salt = decodeBase64Loose(envelope.salt);
+    if (!salt || salt.length !== SALT_BYTES) {
+      throw new AppError('账户 salt 无效。');
+    }
+
+    const iv = decodeBase64Loose(envelope.iv);
+    if (!iv || iv.length !== IV_BYTES) {
+      throw new AppError('账户 IV 无效。');
+    }
+
+    const data = decodeBase64Loose(envelope.data);
+    if (!data || data.length < AUTH_TAG_BYTES) {
+      throw new AppError('账户密文无效。');
+    }
+
+    return { salt, iv, data, iterations };
+  }
+
+  function validateAccountData(rawAccount) {
+    if (!isRecord(rawAccount)) {
+      throw new AppError('账户数据不是有效对象。');
+    }
+    if (rawAccount.version !== ACCOUNT_VERSION) {
+      throw new AppError('账户数据版本不匹配。');
+    }
+
+    const nickname = typeof rawAccount.nickname === 'string' ? rawAccount.nickname.trim() : '';
+    if (!nickname || Array.from(nickname).length > 40) {
+      throw new AppError('账户昵称无效。');
+    }
+
+    const privateKey = decodeKey(rawAccount.myPrivateKey);
+    if (!privateKey) {
+      throw new AppError('账户私钥无效。');
+    }
+
+    const publicKey = decodeKey(rawAccount.myPublicKey);
+    if (!publicKey) {
+      throw new AppError('账户公钥无效。');
+    }
+
+    const derived = nacl.box.keyPair.fromSecretKey(privateKey);
+    let matches = false;
+    try {
+      matches = nacl.verify(derived.publicKey, publicKey);
+    } finally {
+      derived.secretKey.fill(0);
+    }
+    if (!matches) {
+      privateKey.fill(0);
+      publicKey.fill(0);
+      throw new AppError('账户公私钥不匹配。');
+    }
+
+    if (!Array.isArray(rawAccount.contacts)) {
+      throw new AppError('账户通讯录格式无效。');
+    }
+
+    const contacts = rawAccount.contacts.map((entry) => {
+      if (!isRecord(entry)) {
+        throw new AppError('联系人数据格式无效。');
+      }
+      const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+      if (!name || Array.from(name).length > 60) {
+        throw new AppError('联系人昵称无效。');
+      }
+      const contactKey = decodeKey(entry.publicKey);
+      if (!contactKey) {
+        throw new AppError('联系人公钥无效。');
+      }
+      return {
+        id: nextContactId(),
+        name,
+        publicKey: bytesToBase64(contactKey),
+        pinned: entry.pinned === true
+      };
+    });
+
+    return {
+      nickname,
+      privateKey,
+      publicKey,
+      contacts
+    };
+  }
+
+  function serializeAccount() {
+    return {
+      version: ACCOUNT_VERSION,
+      nickname: state.nickname,
+      myPrivateKey: bytesToBase64(state.privateKey),
+      myPublicKey: bytesToBase64(state.publicKey),
+      contacts: state.contacts.map((contact) => ({
+        name: contact.name,
+        publicKey: contact.publicKey,
+        pinned: contact.pinned === true
+      }))
+    };
+  }
+
+  function requireWebCrypto() {
+    const cryptoObject = window.crypto;
+    if (!cryptoObject || !cryptoObject.subtle ||
+        typeof cryptoObject.subtle.importKey !== 'function' ||
+        typeof cryptoObject.subtle.deriveKey !== 'function' ||
+        typeof cryptoObject.subtle.encrypt !== 'function' ||
+        typeof cryptoObject.subtle.decrypt !== 'function' ||
+        typeof cryptoObject.getRandomValues !== 'function') {
+      throw new AppError('当前浏览器未开放 Web Crypto API，无法建立本机账户。请使用最新版 Chrome 或 Edge。');
+    }
+    return cryptoObject;
+  }
+
+  async function deriveAccountKey(password, salt, iterations) {
+    const cryptoObject = requireWebCrypto();
+    const passwordKey = await cryptoObject.subtle.importKey(
+      'raw',
+      encoder.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    return cryptoObject.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations,
+        hash: 'SHA-256'
+      },
+      passwordKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  async function encryptAccount(account, key, saltBase64, iterations) {
+    const cryptoObject = requireWebCrypto();
+    const salt = decodeBase64Loose(saltBase64);
+    if (!salt || salt.length !== SALT_BYTES) {
+      throw new AppError('账户 salt 无效。');
+    }
+    const iv = cryptoObject.getRandomValues(new Uint8Array(IV_BYTES));
+    const encrypted = await cryptoObject.subtle.encrypt(
+      { name: 'AES-GCM', iv, tagLength: 128 },
+      key,
+      encoder.encode(JSON.stringify(account, null, 2))
+    );
+
+    return {
+      encrypted: true,
+      version: ENVELOPE_VERSION,
+      algorithm: 'AES-256-GCM',
+      kdf: 'PBKDF2',
+      kdfIterations: iterations,
+      salt: saltBase64,
+      iv: bytesToBase64(iv),
+      data: bytesToBase64(new Uint8Array(encrypted))
+    };
+  }
+
+  async function decryptAccountEnvelope(envelope, password) {
+    const meta = validateEnvelopeMetadata(envelope);
+    const key = await deriveAccountKey(password, meta.salt, meta.iterations);
+
+    let plaintextBytes;
+    try {
+      plaintextBytes = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: meta.iv, tagLength: 128 },
+        key,
+        meta.data
+      );
+    } catch (error) {
+      throw new AuthError('密码错误或账户数据已损坏。');
+    }
+
+    let text;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(plaintextBytes));
+    } catch (error) {
+      throw new AuthError('密码错误或账户数据已损坏。');
+    }
+
+    let rawAccount;
+    try {
+      rawAccount = JSON.parse(text);
+    } catch (error) {
+      throw new AuthError('密码错误或账户数据已损坏。');
+    }
+
+    let account;
+    try {
+      account = validateAccountData(rawAccount);
+    } catch (error) {
+      throw new AuthError('密码错误或账户数据已损坏。');
+    }
+
+    return { account, key };
+  }
+
+  async function verifyAccountPassword(password) {
+    if (!state.envelope) {
+      return false;
+    }
+    try {
+      const meta = validateEnvelopeMetadata(state.envelope);
+      const key = await deriveAccountKey(password, meta.salt, meta.iterations);
+      await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: meta.iv, tagLength: 128 },
+        key,
+        meta.data
+      );
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function queueAccountSave() {
+    if (!state.accountKey || !state.envelope) {
+      return Promise.reject(new AppError('账户尚未解锁。'));
+    }
+
+    const snapshot = serializeAccount();
+    const key = state.accountKey;
+    const salt = state.envelope.salt;
+    const iterations = state.envelope.kdfIterations;
+
+    const operation = state.saveChain.then(async () => {
+      const envelope = await encryptAccount(snapshot, key, salt, iterations);
+      const stored = await writeStoredEnvelope(envelope);
+      state.envelope = stored;
+      updateFileIndicators();
+      return stored;
+    });
+
+    state.saveChain = operation.catch(() => {});
+    return operation;
+  }
+
+  async function saveWithToast(message) {
+    try {
+      await queueAccountSave();
+      if (message) {
+        showToast(message, 'success');
+      }
+      return true;
+    } catch (error) {
+      showToast('账户保存失败，请重试。', 'error');
+      return false;
+    }
+  }
+
+  /* -----------------------------------------------------------------------
+   * Account file stored next to this page
+   * --------------------------------------------------------------------- */
+
+  function nativeBridge() {
+    if (window.go && window.go.main && window.go.main.App) {
+      return window.go.main.App;
+    }
+    return null;
+  }
+
+  function nativeMode() {
+    return nativeBridge() !== null;
+  }
+
+  async function waitForBridge(timeoutMs) {
+    if (nativeBridge()) {
+      return true;
+    }
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+      if (nativeBridge()) {
+        return true;
+      }
+    }
+    return nativeBridge() !== null;
+  }
+
+  // Reads the account left behind by builds that stored it in IndexedDB.
+  // Uses a dedicated connection so a stale/blocked handle cannot hide it.
+  async function readLegacyVaultAccount() {
+    if (!window.indexedDB) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      let request;
+      try {
+        request = indexedDB.open(DB_NAME, 1);
+      } catch (error) {
+        resolve(null);
+        return;
+      }
+
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(DB_STORE)) {
+          db.createObjectStore(DB_STORE);
+        }
+      };
+      request.onerror = () => resolve(null);
+      request.onblocked = () => resolve(null);
+      request.onsuccess = () => {
+        const db = request.result;
+        let done = false;
+        const finish = (value) => {
+          if (done) {
+            return;
+          }
+          done = true;
+          try {
+            db.close();
+          } catch (error) {
+            /* ignore */
+          }
+          resolve(value);
+        };
+
+        try {
+          if (!db.objectStoreNames.contains(DB_STORE)) {
+            finish(null);
+            return;
+          }
+          const transaction = db.transaction(DB_STORE, 'readonly');
+          const get = transaction.objectStore(DB_STORE).get(ACCOUNT_RECORD);
+          get.onsuccess = () => finish(get.result || null);
+          get.onerror = () => finish(null);
+        } catch (error) {
+          finish(null);
+        }
+      };
+    });
+  }
+
+  // Best effort: wipe the legacy vault so it can never be imported twice.
+  async function clearLegacyVault() {
+    await new Promise((resolve) => {
+      try {
+        const request = indexedDB.deleteDatabase(DB_NAME);
+        request.onsuccess = () => resolve();
+        request.onerror = () => resolve();
+        request.onblocked = () => resolve();
+      } catch (error) {
+        resolve();
+      }
+    });
+  }
+
+  async function readNativeEnvelope() {
+    const bridge = nativeBridge();
+    if (!bridge) {
+      return null;
+    }
+
+    const text = await bridge.LoadAccount();
+    if (!text || !text.trim()) {
+      return null;
+    }
+
+    const parsed = JSON.parse(text);
+    validateEnvelopeMetadata(parsed);
+    return parsed;
+  }
+
+  async function readStoredEnvelope() {
+    if (nativeMode()) {
+      return readNativeEnvelope();
+    }
+    return (await dbGet(ACCOUNT_RECORD).catch(() => null)) || null;
+  }
+
+  async function writeStoredEnvelope(envelope) {
+    const label = (state.nickname || state.accountLabel || '').trim();
+    const payload = label ? Object.assign({}, envelope, { label }) : envelope;
+    const bridge = nativeBridge();
+
+    if (bridge) {
+      await bridge.SaveAccount(JSON.stringify(payload, null, 2));
+      markMigrated();
+      return payload;
+    }
+
+    await dbPut(ACCOUNT_RECORD, payload);
+    await mirrorEnvelopeToFile(payload);
+    return payload;
+  }
+
+  async function isMigrated() {
+    const bridge = nativeBridge();
+    if (!bridge) {
+      return true;
+    }
+    try {
+      return await bridge.IsMigrated();
+    } catch (error) {
+      // Assume migrated: never resurrect an old vault by accident.
+      return true;
+    }
+  }
+
+  async function markMigrated() {
+    const bridge = nativeBridge();
+    if (!bridge) {
+      return;
+    }
+    try {
+      await bridge.MarkMigrated();
+    } catch (error) {
+      /* marker is best effort */
+    }
+  }
+
+  async function writeEnvelopeToAppDir(envelope) {
+    const form = new FormData();
+    form.append(
+      ACCOUNT_SINK_FIELD,
+      new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' }),
+      ACCOUNT_FILE
+    );
+
+    const response = await fetch(ACCOUNT_SINK_URL, {
+      method: 'POST',
+      body: form,
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new FileAccessError('配置文件写入失败（HTTP ' + response.status + '）。');
+    }
+    return ACCOUNT_FILE;
+  }
+
+  async function mirrorEnvelopeToFile(envelope) {
+    try {
+      state.fileLocation = await writeEnvelopeToAppDir(envelope);
+      state.fileMode = 'synced';
+      state.fileMessage = '';
+      return true;
+    } catch (error) {
+      state.fileMode = 'error';
+      state.fileMessage = error && error.message ? error.message : '配置文件写入失败。';
+      return false;
+    }
+  }
+
+  async function readEnvelopeFromAppDir() {
+    let response;
+    try {
+      response = await fetch(ACCOUNT_FILE, { cache: 'no-store' });
+    } catch (error) {
+      return null;
+    }
+    if (!response.ok) {
+      return null;
+    }
+    try {
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function updateFileIndicators() {
+    /* Account data is mirrored into account.json next to this page. */
+  }
+
+  /* -----------------------------------------------------------------------
+   * Boot, login and account creation
+   * --------------------------------------------------------------------- */
+
+  function showBootFatal(message) {
+    ui.bootLoading.hidden = true;
+    ui.loginPanel.hidden = true;
+    ui.setupPanel.hidden = true;
+    ui.bootFatal.textContent = message;
+    ui.bootFatal.hidden = false;
+  }
+
+  function showLoginPanel() {
+    ui.bootLoading.hidden = true;
+    ui.setupPanel.hidden = true;
+    ui.bootFatal.hidden = true;
+    renderLoginAccountName();
+    ui.loginPanel.hidden = false;
+    ui.loginPassword.focus();
+  }
+
+  function showSetupPanel() {
+    if (state.envelope) {
+      showLoginPanel();
+      return;
+    }
+
+    ui.bootLoading.hidden = true;
+    ui.loginPanel.hidden = true;
+    ui.bootFatal.hidden = true;
+    ui.setupPanel.hidden = false;
+    setupBusy = false;
+    ui.setupNickname.value = '本机操作员';
+    ui.setupPassword.value = '';
+    ui.setupPassword.type = 'password';
+    ui.setupTogglePasswords.textContent = '显示';
+    ui.setupTogglePasswords.setAttribute('aria-pressed', 'false');
+    ui.setupSubmit.disabled = false;
+    ui.setupSubmit.textContent = '创建账户';
+    ui.setupNickname.focus();
+  }
+
+  async function bootNative() {
+    let envelope = null;
+
+    try {
+      envelope = await readNativeEnvelope();
+    } catch (error) {
+      showBootFatal('account.json 已损坏或无法读取，请确认文件完整后重试。');
+      return;
+    }
+
+    // One-time migration: move an account that only exists in the legacy
+    // WebView2/IndexedDB vault into account.json, then drop that vault.
+    if (!envelope && !(await isMigrated())) {
+      const legacy = await readLegacyVaultAccount();
+      if (legacy) {
+        try {
+          validateEnvelopeMetadata(legacy);
+          state.nickname = typeof legacy.label === 'string' ? legacy.label.trim() : '';
+          state.accountLabel = state.nickname;
+          envelope = await writeStoredEnvelope(legacy);
+          await markMigrated();
+          await clearLegacyVault();
+        } catch (error) {
+          envelope = null;
+        }
+      }
+    }
+
+    if (envelope) {
+      if (typeof envelope.label === 'string') {
+        state.accountLabel = envelope.label.trim();
+      }
+      markMigrated();
+      state.envelope = envelope;
+      updateFileIndicators();
+      showLoginPanel();
+      return;
+    }
+
+    updateFileIndicators();
+    showSetupPanel();
+  }
+
+  async function boot() {
+    try {
+      requireWebCrypto();
+      const hasBridge = await waitForBridge(2000);
+
+      if (hasBridge) {
+        await bootNative();
+        return;
+      }
+
+      if (!window.indexedDB) {
+        throw new AppError('当前浏览器不支持本机加密存储。');
+      }
+
+      const storedAccount = await dbGet(ACCOUNT_RECORD).catch(() => null);
+      const storedLabel = await dbGet(ACCOUNT_LABEL_RECORD).catch(() => null);
+      if (storedLabel && typeof storedLabel.nickname === 'string') {
+        state.accountLabel = storedLabel.nickname.trim();
+      }
+
+      let envelope = storedAccount || null;
+      if (!envelope) {
+        const fileEnvelope = await readEnvelopeFromAppDir();
+        if (fileEnvelope) {
+          try {
+            validateEnvelopeMetadata(fileEnvelope);
+            await dbPut(ACCOUNT_RECORD, fileEnvelope).catch(() => {});
+            envelope = fileEnvelope;
+          } catch (error) {
+            envelope = null;
+          }
+        }
+      }
+
+      if (envelope) {
+        try {
+          validateEnvelopeMetadata(envelope);
+        } catch (error) {
+          showBootFatal('本机账户数据已损坏，无法解锁。');
+          return;
+        }
+        state.envelope = envelope;
+        showLoginPanel();
+      } else {
+        showSetupPanel();
+      }
+      updateFileIndicators();
+    } catch (error) {
+      showBootFatal(error && error.message ? error.message : '初始化本机加密终端失败。');
+    }
+  }
+
+  function enterApp(account, key, envelope) {
+    state.nickname = account.nickname;
+    state.privateKey = account.privateKey;
+    state.publicKey = account.publicKey;
+    state.contacts = account.contacts;
+    state.selectedContactId = null;
+    state.envelope = envelope;
+    state.accountKey = key;
+    state.identityExpanded = true;
+    rememberAccountLabel(account.nickname);
+
+    document.title = account.nickname + ' · 本机加密终端';
+    ui.bootScreen.hidden = true;
+    ui.app.hidden = false;
+    document.body.classList.add('app-active');
+
+    ui.loginPassword.value = '';
+    renderProfile();
+    renderIdentity();
+    setIdentityExpanded(true);
+    renderContacts();
+    resetCryptoWorkspace();
+    updatePeerIndicators();
+    updateFileIndicators();
+    window.setTimeout(() => ui.addFriend.focus(), 0);
+  }
+
+  async function unlockAndEnter() {
+    if (loginBusy) {
+      return;
+    }
+
+    const password = ui.loginPassword.value;
+    if (!password) {
+      showToast('请输入账户密码。', 'error');
+      ui.loginPassword.focus();
+      return;
+    }
+
+    loginBusy = true;
+    ui.loginSubmit.disabled = true;
+    ui.loginSubmit.textContent = '验证中…';
+    ui.loginPassword.disabled = true;
+
+    try {
+      const result = await decryptAccountEnvelope(state.envelope, password);
+      state.accountKey = result.key;
+      state.nickname = result.account.nickname;
+      state.privateKey = result.account.privateKey;
+      state.publicKey = result.account.publicKey;
+      state.contacts = result.account.contacts;
+
+      enterApp(result.account, result.key, state.envelope);
+      showToast('终端已解锁', 'success');
+    } catch (error) {
+      showToast(
+        error instanceof AuthError ? '密码错误或账户数据已损坏。' : (error.message || '解锁失败，请重试。'),
+        'error'
+      );
+      ui.loginPassword.value = '';
+      ui.loginPassword.focus();
+    } finally {
+      loginBusy = false;
+      ui.loginSubmit.disabled = false;
+      ui.loginSubmit.textContent = '解锁终端';
+      ui.loginPassword.disabled = false;
+    }
+  }
+
+  function restoreSetupSecretFields() {
+    ui.setupPassword.value = '';
+    ui.setupPassword.type = 'password';
+    ui.setupTogglePasswords.textContent = '显示';
+    ui.setupTogglePasswords.setAttribute('aria-pressed', 'false');
+  }
+
+  async function createAccount() {
+    if (setupBusy) {
+      return;
+    }
+
+    const nickname = ui.setupNickname.value.trim();
+    const password = ui.setupPassword.value;
+
+    if (!nickname) {
+      showToast('请输入账户昵称。', 'error');
+      ui.setupNickname.focus();
+      return;
+    }
+    if (Array.from(nickname).length > 40) {
+      showToast('账户昵称不能超过 40 个字符。', 'error');
+      ui.setupNickname.focus();
+      return;
+    }
+    if (Array.from(password).length < MIN_PASSWORD_LENGTH) {
+      showToast('账户密码至少需要 8 个字符。', 'error');
+      ui.setupPassword.focus();
+      return;
+    }
+
+    setupBusy = true;
+    ui.setupSubmit.disabled = true;
+    ui.setupSubmit.textContent = '创建中…';
+
+    try {
+      const existing = await readStoredEnvelope().catch(() => null);
+      if (existing) {
+        showToast('本机已经存在账户，请刷新页面并直接解锁。', 'error');
+        return;
+      }
+
+      const pair = nacl.box.keyPair();
+      const salt = requireWebCrypto().getRandomValues(new Uint8Array(SALT_BYTES));
+      const saltBase64 = bytesToBase64(salt);
+      const key = await deriveAccountKey(password, salt, KDF_ITERATIONS);
+      const account = {
+        version: ACCOUNT_VERSION,
+        nickname,
+        myPrivateKey: bytesToBase64(pair.secretKey),
+        myPublicKey: bytesToBase64(pair.publicKey),
+        contacts: []
+      };
+      const envelope = await encryptAccount(account, key, saltBase64, KDF_ITERATIONS);
+
+      state.nickname = nickname;
+      state.accountLabel = nickname;
+      const stored = await writeStoredEnvelope(envelope);
+
+      if (navigator.storage && typeof navigator.storage.persist === 'function') {
+        navigator.storage.persist().catch(() => {});
+      }
+
+      const normalized = validateAccountData(account);
+      restoreSetupSecretFields();
+      enterApp(normalized, key, stored);
+      showToast(
+        nativeMode()
+          ? '账户已创建，账户文件已保存到用户目录'
+          : (state.fileMode === 'synced'
+              ? '账户已创建，已在程序目录生成 account.json'
+              : '账户已创建，已加密保存在浏览器中'),
+        'success'
+      );
+    } catch (error) {
+      showToast(error && error.message ? error.message : '创建账户失败，请重试。', 'error');
+    } finally {
+      setupBusy = false;
+      ui.setupSubmit.disabled = false;
+      ui.setupSubmit.textContent = '创建账户';
+    }
+  }
+
+  /* -----------------------------------------------------------------------
+   * App rendering
+   * --------------------------------------------------------------------- */
+
+  function renderProfile() {
+    ui.homeNickname.textContent = state.nickname;
+  }
+
+  function renderIdentity() {
+    if (!state.publicKey) {
+      return;
+    }
+    ui.myPublicKey.textContent = bytesToBase64(state.publicKey);
+  }
+
+  function getSelectedContact() {
+    return state.contacts.find((contact) => contact.id === state.selectedContactId) || null;
+  }
+
+  function sortedContacts() {
+    return state.contacts
+      .map((contact, index) => ({ contact, index }))
+      .sort((a, b) => {
+        const pinDiff = Number(b.contact.pinned) - Number(a.contact.pinned);
+        return pinDiff !== 0 ? pinDiff : a.index - b.index;
+      })
+      .map((item) => item.contact);
+  }
+
+  function closeContactMenu() {
+    if (state.menuTrigger) {
+      state.menuTrigger.setAttribute('aria-expanded', 'false');
+    }
+    ui.contactMenu.hidden = true;
+    state.menuContactId = null;
+    state.menuTrigger = null;
+  }
+
+  function openContactMenu(contactId, trigger) {
+    if (state.menuTrigger === trigger && state.menuContactId === contactId) {
+      closeContactMenu();
+      return;
+    }
+
+    closeContactMenu();
+    const contact = state.contacts.find((item) => item.id === contactId);
+    if (!contact) {
+      return;
+    }
+
+    state.menuContactId = contactId;
+    state.menuTrigger = trigger;
+    ui.contactMenuPin.textContent = contact.pinned ? '取消置顶' : '置顶';
+    ui.contactMenu.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = ui.contactMenu.getBoundingClientRect();
+    let left = triggerRect.right - menuRect.width;
+    let top = triggerRect.bottom + 4;
+
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    if (top + menuRect.height > window.innerHeight - 8) {
+      top = Math.max(8, triggerRect.top - menuRect.height - 4);
+    }
+
+    ui.contactMenu.style.left = left + 'px';
+    ui.contactMenu.style.top = top + 'px';
+    ui.contactMenuPin.focus();
+  }
+
+  function selectContact(contactId) {
+    if (state.selectedContactId === contactId) {
+      return;
+    }
+    state.selectedContactId = contactId;
+    closeContactMenu();
+    renderContacts();
+    resetCryptoWorkspace();
+    updatePeerIndicators();
+  }
+
+  function contactCard(contact) {
+    const item = document.createElement('li');
+    item.className = 'contact-item' + (contact.id === state.selectedContactId ? ' is-selected' : '');
+    item.dataset.contactId = contact.id;
+
+    const selectButton = document.createElement('button');
+    selectButton.type = 'button';
+    selectButton.className = 'contact-select';
+    selectButton.setAttribute('aria-pressed', String(contact.id === state.selectedContactId));
+    selectButton.setAttribute('aria-label', '选择好友 ' + contact.name);
+    selectButton.addEventListener('click', () => {
+      selectContact(contact.id);
+    });
+
+    const avatar = document.createElement('span');
+    avatar.className = 'contact-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = contactInitial(contact.name);
+
+    const info = document.createElement('span');
+    info.className = 'contact-info';
+
+    const nameLine = document.createElement('span');
+    nameLine.className = 'contact-name-line';
+
+    const name = document.createElement('span');
+    name.className = 'contact-name';
+    name.textContent = contact.name;
+    name.setAttribute('title', contact.name);
+    nameLine.append(name);
+
+    if (contact.pinned) {
+      const pin = document.createElement('span');
+      pin.className = 'contact-pin';
+      pin.textContent = '置顶';
+      nameLine.append(pin);
+    }
+
+    info.append(nameLine);
+    selectButton.append(avatar, info);
+
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'contact-more';
+    more.textContent = '⋮';
+    more.setAttribute('aria-label', contact.name + ' 的更多操作');
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    more.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openContactMenu(contact.id, more);
+    });
+
+    item.append(selectButton, more);
+    return item;
+  }
+
+  function renderContacts() {
+    closeContactMenu();
+    const sorted = sortedContacts();
+    ui.contactCount.textContent = state.contacts.length + ' 位联系人';
+    ui.contactsEmpty.hidden = state.contacts.length > 0;
+
+    if (state.selectedContactId && !state.contacts.some((contact) => contact.id === state.selectedContactId)) {
+      state.selectedContactId = null;
+    }
+
+    const fragment = document.createDocumentFragment();
+    sorted.forEach((contact) => fragment.append(contactCard(contact)));
+    ui.contactList.replaceChildren(fragment);
+  }
+
+  function updatePeerIndicators() {
+    const contact = getSelectedContact();
+    const hasContact = Boolean(contact);
+
+    ui.encryptPeer.textContent = contact ? contact.name : '未选择好友';
+    ui.decryptPeer.textContent = contact ? contact.name : '未选择好友';
+    ui.encryptPeer.title = contact ? '接收方：' + contact.name : '';
+    ui.decryptPeer.title = contact ? '发送方：' + contact.name : '';
+
+    ui.encryptCard.classList.toggle('is-idle', !hasContact);
+    ui.decryptCard.classList.toggle('is-idle', !hasContact);
+
+    ui.plaintext.disabled = !hasContact;
+    ui.encryptButton.disabled = !hasContact;
+    ui.decryptCiphertext.disabled = !hasContact;
+    ui.decryptButton.disabled = !hasContact;
+
+    ui.plaintext.placeholder = contact
+      ? '输入要发送给 ' + contact.name + ' 的文本…'
+      : '选择左侧好友后输入需要加密的文本…';
+    ui.decryptCiphertext.placeholder = contact
+      ? '粘贴 ' + contact.name + ' 发来的密文…'
+      : '选择左侧好友后粘贴对方发来的密文…';
+
+    if (!ui.ciphertext.value) {
+      ui.copyCiphertext.disabled = true;
+    }
+    if (!ui.decryptedText.value) {
+      ui.copyDecrypted.disabled = true;
+    }
+  }
+
+  function resetCryptoWorkspace() {
+    ui.plaintext.value = '';
+    updatePlaintextCount();
+    ui.ciphertext.value = '';
+    ui.copyCiphertext.disabled = true;
+
+    ui.decryptCiphertext.value = '';
+    ui.decryptedText.value = '';
+    ui.copyDecrypted.disabled = true;
+  }
+
+  function renderAllAfterChange() {
+    renderProfile();
+    renderContacts();
+    updatePeerIndicators();
+    updateFileIndicators();
+  }
+
+  /* -----------------------------------------------------------------------
+   * Encryption / decryption
+   * --------------------------------------------------------------------- */
+
+  function handleEncrypt() {
+    ui.ciphertext.value = '';
+    ui.copyCiphertext.disabled = true;
+
+    const contact = getSelectedContact();
+    if (!contact) {
+      showToast('请先在通讯录中选择一位好友。', 'error');
+      return;
+    }
+    if (!ui.plaintext.value) {
+      showToast('请输入要加密的明文。', 'error');
+      ui.plaintext.focus();
+      return;
+    }
+
+    try {
+      const receiverKey = decodeKey(contact.publicKey);
+      if (!receiverKey) {
+        throw new AppError('好友公钥无效。');
+      }
+      const nonce = nacl.randomBytes(NONCE_BYTES);
+      const boxed = nacl.box(encoder.encode(ui.plaintext.value), nonce, receiverKey, state.privateKey);
+      const packed = new Uint8Array(nonce.length + boxed.length);
+      packed.set(nonce, 0);
+      packed.set(boxed, nonce.length);
+      const result = bytesToBase64(packed);
+      ui.ciphertext.value = result;
+      ui.copyCiphertext.disabled = false;
+    } catch (error) {
+      showToast('加密失败，请重试。', 'error');
+    }
+  }
+
+  function decryptFailure() {
+    ui.decryptedText.value = '';
+    ui.copyDecrypted.disabled = true;
+    showToast('解密失败', 'error');
+  }
+
+  function handleDecrypt() {
+    ui.decryptedText.value = '';
+    ui.copyDecrypted.disabled = true;
+
+    const contact = getSelectedContact();
+    if (!contact) {
+      showToast('请先在通讯录中选择一位好友。', 'error');
+      return;
+    }
+    if (!ui.decryptCiphertext.value.trim()) {
+      showToast('请粘贴需要解密的密文。', 'error');
+      ui.decryptCiphertext.focus();
+      return;
+    }
+
+    try {
+      const senderKey = decodeKey(contact.publicKey);
+      if (!senderKey) {
+        decryptFailure();
+        return;
+      }
+      const packed = decodeBase64Loose(ui.decryptCiphertext.value);
+      if (!packed || packed.length < NONCE_BYTES + AUTH_TAG_BYTES) {
+        decryptFailure();
+        return;
+      }
+
+      const nonce = packed.subarray(0, NONCE_BYTES);
+      const box = packed.subarray(NONCE_BYTES);
+      const opened = nacl.box.open(box, nonce, senderKey, state.privateKey);
+      if (!opened) {
+        decryptFailure();
+        return;
+      }
+
+      const plaintext = decoder.decode(opened);
+      ui.decryptedText.value = plaintext;
+      ui.copyDecrypted.disabled = plaintext.length === 0;
+    } catch (error) {
+      decryptFailure();
+    }
+  }
+
+  /* -----------------------------------------------------------------------
+   * Contacts
+   * --------------------------------------------------------------------- */
+
+  function openFriendDialog(contact = null) {
+    if (contact) {
+      state.editingContactId = contact.id;
+      ui.friendDialogTitle.textContent = '编辑好友';
+      ui.friendName.value = contact.name;
+      ui.friendPublicKey.value = contact.publicKey;
+    } else {
+      state.editingContactId = null;
+      ui.friendDialogTitle.textContent = '添加好友';
+      ui.friendName.value = '';
+      ui.friendPublicKey.value = '';
+    }
+
+    clearStatus(ui.friendStatus);
+    ui.friendSave.disabled = false;
+    ui.friendSave.textContent = '保存好友';
+    openDialog(ui.friendDialog, ui.friendName);
+  }
+
+  async function saveFriend() {
+    if (friendBusy) {
+      return;
+    }
+
+    clearStatus(ui.friendStatus);
+    const name = ui.friendName.value.trim();
+    const publicKeyRaw = ui.friendPublicKey.value;
+    if (!name) {
+      setStatus(ui.friendStatus, 'error', '请输入好友昵称。');
+      ui.friendName.focus();
+      return;
+    }
+    if (Array.from(name).length > 60) {
+      setStatus(ui.friendStatus, 'error', '好友昵称不能超过 60 个字符。');
+      ui.friendName.focus();
+      return;
+    }
+
+    const keyBytes = decodeKey(publicKeyRaw);
+    if (!keyBytes) {
+      setStatus(ui.friendStatus, 'error', '公钥无效：Base64 解码后必须正好是 32 字节。');
+      ui.friendPublicKey.focus();
+      return;
+    }
+    const publicKey = bytesToBase64(keyBytes);
+    const editingId = state.editingContactId;
+
+    friendBusy = true;
+    ui.friendSave.disabled = true;
+    ui.friendSave.textContent = '保存中…';
+
+    try {
+      if (editingId) {
+        const contact = state.contacts.find((item) => item.id === editingId);
+        if (!contact) {
+          throw new AppError('好友不存在。');
+        }
+        contact.name = name;
+        contact.publicKey = publicKey;
+        resetCryptoWorkspace();
+        renderContacts();
+        updatePeerIndicators();
+        closeDialog(ui.friendDialog);
+        await saveWithToast('好友信息已更新');
+      } else {
+        const contact = {
+          id: nextContactId(),
+          name,
+          publicKey,
+          pinned: false
+        };
+        state.contacts.push(contact);
+        state.selectedContactId = contact.id;
+        renderContacts();
+        resetCryptoWorkspace();
+        updatePeerIndicators();
+        closeDialog(ui.friendDialog);
+        window.setTimeout(() => {
+          if (ui.contactList.lastElementChild) {
+            ui.contactList.lastElementChild.scrollIntoView({ block: 'nearest' });
+          }
+        }, 0);
+        await saveWithToast('好友已添加并选中');
+      }
+    } catch (error) {
+      setStatus(ui.friendStatus, 'error', error && error.message ? error.message : '保存好友失败。');
+    } finally {
+      friendBusy = false;
+      ui.friendSave.disabled = false;
+      ui.friendSave.textContent = '保存好友';
+    }
+  }
+
+  function openDeleteFriendDialog(contact) {
+    state.deletingContactId = contact.id;
+    ui.deleteFriendName.textContent = contact.name;
+    ui.deleteFriendConfirm.disabled = false;
+    ui.deleteFriendConfirm.textContent = '确认删除';
+    openDialog(ui.deleteFriendDialog, ui.deleteFriendConfirm);
+  }
+
+  async function confirmDeleteFriend() {
+    const contact = state.contacts.find((item) => item.id === state.deletingContactId);
+    if (!contact) {
+      closeDialog(ui.deleteFriendDialog);
+      return;
+    }
+
+    ui.deleteFriendConfirm.disabled = true;
+    ui.deleteFriendConfirm.textContent = '删除中…';
+
+    state.contacts = state.contacts.filter((item) => item.id !== contact.id);
+    if (state.selectedContactId === contact.id) {
+      state.selectedContactId = null;
+      resetCryptoWorkspace();
+    }
+    renderContacts();
+    updatePeerIndicators();
+    closeDialog(ui.deleteFriendDialog);
+    state.deletingContactId = null;
+    await saveWithToast('已删除好友「' + contact.name + '」');
+
+    ui.deleteFriendConfirm.disabled = false;
+    ui.deleteFriendConfirm.textContent = '确认删除';
+  }
+
+  async function togglePinnedContact(contactId) {
+    const contact = state.contacts.find((item) => item.id === contactId);
+    if (!contact) {
+      return;
+    }
+    contact.pinned = !contact.pinned;
+    closeContactMenu();
+    renderContacts();
+    await saveWithToast(contact.pinned ? '好友已置顶' : '好友已取消置顶');
+  }
+
+  function handleContactMenuPin() {
+    if (!state.menuContactId) {
+      return;
+    }
+    const id = state.menuContactId;
+    closeContactMenu();
+    togglePinnedContact(id);
+  }
+
+  function handleContactMenuEdit() {
+    if (!state.menuContactId) {
+      return;
+    }
+    const contact = state.contacts.find((item) => item.id === state.menuContactId);
+    closeContactMenu();
+    if (contact) {
+      openFriendDialog(contact);
+    }
+  }
+
+  function handleContactMenuDelete() {
+    if (!state.menuContactId) {
+      return;
+    }
+    const contact = state.contacts.find((item) => item.id === state.menuContactId);
+    closeContactMenu();
+    if (contact) {
+      openDeleteFriendDialog(contact);
+    }
+  }
+
+  /* -----------------------------------------------------------------------
+   * Nickname and private-key settings
+   * --------------------------------------------------------------------- */
+
+  function closeAccountMenu(restoreFocus = false) {
+    if (ui.accountMenu.hidden) {
+      return;
+    }
+    ui.accountMenu.hidden = true;
+    ui.accountMenuButton.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) {
+      ui.accountMenuButton.focus();
+    }
+  }
+
+  function openAccountMenu() {
+    closeContactMenu();
+    ui.accountMenu.hidden = false;
+    ui.accountMenuButton.setAttribute('aria-expanded', 'true');
+
+    const triggerRect = ui.accountMenuButton.getBoundingClientRect();
+    const menuRect = ui.accountMenu.getBoundingClientRect();
+    let left = triggerRect.right - menuRect.width + 12;
+    let top = triggerRect.bottom + 10;
+
+    left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
+    if (top + menuRect.height > window.innerHeight - 8) {
+      top = Math.max(8, triggerRect.top - menuRect.height - 6);
+    }
+
+    ui.accountMenu.style.left = left + 'px';
+    ui.accountMenu.style.top = top + 'px';
+    ui.accountMenuSettings.focus();
+  }
+
+  function toggleAccountMenu() {
+    if (ui.accountMenu.hidden) {
+      openAccountMenu();
+    } else {
+      closeAccountMenu(true);
+    }
+  }
+
+  async function logoutAccount() {
+    closeAccountMenu();
+    try {
+      await Promise.all([state.saveChain, state.labelChain]);
+    } catch (error) {
+      /* Keep logout usable even if a pending save failed. */
+    }
+    if (state.privateKey) {
+      state.privateKey.fill(0);
+    }
+    window.location.reload();
+  }
+
+  function openSettingsDialog() {
+    ui.settingsNickname.value = state.nickname;
+    clearStatus(ui.nicknameStatus);
+    openDialog(ui.settingsDialog, ui.settingsNickname);
+  }
+
+  async function saveNickname() {
+    const nickname = ui.settingsNickname.value.trim();
+    clearStatus(ui.nicknameStatus);
+    if (!nickname) {
+      setStatus(ui.nicknameStatus, 'error', '昵称不能为空。');
+      return;
+    }
+    if (Array.from(nickname).length > 40) {
+      setStatus(ui.nicknameStatus, 'error', '昵称不能超过 40 个字符。');
+      return;
+    }
+
+    state.nickname = nickname;
+    renderProfile();
+    ui.saveNickname.disabled = true;
+    ui.saveNickname.textContent = '保存中…';
+    const saved = await saveWithToast();
+    ui.saveNickname.disabled = false;
+    ui.saveNickname.textContent = '保存昵称';
+
+    if (saved) {
+      rememberAccountLabel(nickname);
+      setStatus(ui.nicknameStatus, 'success', '昵称已保存。');
+    } else {
+      setStatus(ui.nicknameStatus, 'error', '昵称保存失败，请重试。');
+    }
+  }
+
+  function openViewPasswordDialog() {
+    ui.viewPasswordInput.value = '';
+    ui.viewPasswordInput.type = 'password';
+    ui.viewPasswordToggle.textContent = '显示';
+    ui.viewPasswordToggle.setAttribute('aria-pressed', 'false');
+    ui.viewPasswordSubmit.disabled = false;
+    ui.viewPasswordSubmit.textContent = '验证并查看';
+    clearStatus(ui.viewPasswordStatus);
+    openDialog(ui.viewPasswordDialog, ui.viewPasswordInput);
+  }
+
+  async function submitViewPassword() {
+    if (viewBusy) {
+      return;
+    }
+    const password = ui.viewPasswordInput.value;
+    clearStatus(ui.viewPasswordStatus);
+    if (!password) {
+      setStatus(ui.viewPasswordStatus, 'error', '请输入账户密码。');
+      ui.viewPasswordInput.focus();
+      return;
+    }
+
+    viewBusy = true;
+    ui.viewPasswordSubmit.disabled = true;
+    ui.viewPasswordSubmit.textContent = '验证中…';
+    const valid = await verifyAccountPassword(password);
+    viewBusy = false;
+    ui.viewPasswordSubmit.disabled = false;
+    ui.viewPasswordSubmit.textContent = '验证并查看';
+
+    if (!valid) {
+      setStatus(ui.viewPasswordStatus, 'error', '密码错误。');
+      ui.viewPasswordInput.value = '';
+      ui.viewPasswordInput.focus();
+      return;
+    }
+
+    closeDialog(ui.viewPasswordDialog);
+    ui.revealedPrivateKey.textContent = bytesToBase64(state.privateKey);
+    openDialog(ui.privateKeyDialog, ui.privateKeyDialog.querySelector('.modal-close'));
+  }
+
+  function openResetPrivateDialog() {
+    ui.resetPassword.value = '';
+    ui.resetPhrase.value = '';
+    clearStatus(ui.resetStatus);
+    ui.resetSubmit.disabled = true;
+    ui.resetSubmit.textContent = '重置私钥';
+    openDialog(ui.resetPrivateDialog, ui.resetPassword);
+  }
+
+  function updateResetButtonState() {
+    const ready = ui.resetPhrase.value.trim() === RESET_PHRASE && ui.resetPassword.value.length > 0;
+    ui.resetSubmit.disabled = !ready || resetBusy;
+  }
+
+  async function resetPrivateKey() {
+    if (resetBusy) {
+      return;
+    }
+
+    clearStatus(ui.resetStatus);
+    if (ui.resetPhrase.value.trim() !== RESET_PHRASE) {
+      setStatus(ui.resetStatus, 'error', '请输入大写 RESET 以确认。');
+      ui.resetPhrase.focus();
+      return;
+    }
+    if (!ui.resetPassword.value) {
+      setStatus(ui.resetStatus, 'error', '请输入账户密码。');
+      ui.resetPassword.focus();
+      return;
+    }
+
+    resetBusy = true;
+    ui.resetSubmit.disabled = true;
+    ui.resetSubmit.textContent = '重置中…';
+
+    try {
+      const valid = await verifyAccountPassword(ui.resetPassword.value);
+      if (!valid) {
+        setStatus(ui.resetStatus, 'error', '密码错误。');
+        ui.resetPassword.value = '';
+        ui.resetPassword.focus();
+        return;
+      }
+
+      const oldPrivate = state.privateKey;
+      const oldPublic = state.publicKey;
+      const pair = nacl.box.keyPair();
+      state.privateKey = pair.secretKey;
+      state.publicKey = pair.publicKey;
+      renderIdentity();
+      resetCryptoWorkspace();
+      updatePeerIndicators();
+
+      try {
+        await queueAccountSave();
+      } catch (error) {
+        if (state.privateKey) {
+          state.privateKey.fill(0);
+        }
+        state.privateKey = oldPrivate;
+        state.publicKey = oldPublic;
+        renderIdentity();
+        updatePeerIndicators();
+        throw new AppError('私钥重置未能保存，已恢复原私钥。');
+      }
+
+      oldPrivate.fill(0);
+      closeDialog(ui.resetPrivateDialog);
+      ui.resetPassword.value = '';
+      ui.resetPhrase.value = '';
+      setStatus(ui.resetStatus, 'success', '私钥已重置。');
+      showToast('私钥已重置，请将新的公钥重新分享给联系人', 'warning');
+    } catch (error) {
+      setStatus(ui.resetStatus, 'error', error && error.message ? error.message : '重置私钥失败。');
+    } finally {
+      resetBusy = false;
+      ui.resetSubmit.textContent = '重置私钥';
+      updateResetButtonState();
+    }
+  }
+
+  /* -----------------------------------------------------------------------
+   * Clipboard
+   * --------------------------------------------------------------------- */
+
+  function copyText(text, successMessage, sourceElement) {
+    if (!text) {
+      return;
+    }
+
+    const fallbackCopy = () => {
+      const helper = document.createElement('textarea');
+      helper.value = text;
+      helper.setAttribute('readonly', '');
+      helper.setAttribute('aria-hidden', 'true');
+      helper.style.position = 'fixed';
+      helper.style.top = '-1000px';
+      helper.style.left = '-1000px';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.focus();
+      helper.select();
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch (error) {
+        copied = false;
+      }
+      helper.remove();
+      return copied;
+    };
+
+    const finish = (copied) => {
+      if (copied) {
+        showToast(successMessage, 'success');
+        return;
+      }
+      if (sourceElement && typeof sourceElement.select === 'function') {
+        sourceElement.focus();
+        sourceElement.select();
+      }
+      showToast('复制失败，请手动选中文本复制。', 'error');
+    };
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text)
+        .then(() => finish(true))
+        .catch(() => finish(fallbackCopy()));
+      return;
+    }
+    finish(fallbackCopy());
+  }
+
+  /* -----------------------------------------------------------------------
+   * Events and initialization
+   * --------------------------------------------------------------------- */
+
+  function bindEvents() {
+    document.querySelectorAll('[data-close]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const dialog = button.closest('dialog');
+        if (!dialog) {
+          return;
+        }
+        if (dialog === ui.privateKeyDialog) {
+          ui.revealedPrivateKey.textContent = '';
+        }
+        dialog.close();
+      });
+    });
+
+    ui.loginSubmit.addEventListener('click', unlockAndEnter);
+    ui.loginPassword.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        unlockAndEnter();
+      }
+    });
+    ui.loginTogglePassword.addEventListener('click', () => {
+      togglePasswordVisibility(ui.loginPassword, ui.loginTogglePassword);
+    });
+
+    ui.setupSubmit.addEventListener('click', createAccount);
+    ui.setupTogglePasswords.addEventListener('click', () => {
+      const visible = ui.setupPassword.type === 'password';
+      ui.setupPassword.type = visible ? 'text' : 'password';
+      ui.setupTogglePasswords.textContent = visible ? '隐藏' : '显示';
+      ui.setupTogglePasswords.setAttribute('aria-pressed', String(visible));
+      ui.setupPassword.focus();
+    });
+    [ui.setupNickname, ui.setupPassword].forEach((input) => {
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          createAccount();
+        }
+      });
+    });
+
+    ui.accountMenuButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleAccountMenu();
+    });
+    ui.accountMenuSettings.addEventListener('click', () => {
+      closeAccountMenu();
+      openSettingsDialog();
+    });
+    ui.accountMenuLogout.addEventListener('click', logoutAccount);
+    ui.toggleIdentity.addEventListener('click', () => {
+      setIdentityExpanded(!state.identityExpanded);
+    });
+
+    const copyPublicKey = () => {
+      if (state.publicKey) {
+        copyText(bytesToBase64(state.publicKey), '公钥已复制');
+      }
+    };
+    ui.publicKeyStage.addEventListener('click', copyPublicKey);
+    ui.publicKeyStage.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        copyPublicKey();
+      }
+    });
+
+    ui.addFriend.addEventListener('click', () => openFriendDialog());
+    ui.emptyAddFriend.addEventListener('click', () => openFriendDialog());
+    ui.friendSave.addEventListener('click', saveFriend);
+    ui.friendName.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveFriend();
+      }
+    });
+    ui.friendDialog.addEventListener('close', () => {
+      state.editingContactId = null;
+      clearStatus(ui.friendStatus);
+      ui.friendSave.disabled = false;
+      ui.friendSave.textContent = '保存好友';
+    });
+
+    ui.deleteFriendConfirm.addEventListener('click', confirmDeleteFriend);
+    ui.deleteFriendDialog.addEventListener('close', () => {
+      state.deletingContactId = null;
+      ui.deleteFriendConfirm.disabled = false;
+      ui.deleteFriendConfirm.textContent = '确认删除';
+    });
+
+    ui.contactMenuPin.addEventListener('click', handleContactMenuPin);
+    ui.contactMenuEdit.addEventListener('click', handleContactMenuEdit);
+    ui.contactMenuDelete.addEventListener('click', handleContactMenuDelete);
+    ui.contactScroll.addEventListener('scroll', closeContactMenu);
+    window.addEventListener('resize', closeContactMenu);
+    document.addEventListener('pointerdown', (event) => {
+      if (ui.accountMenu.hidden) {
+        return;
+      }
+      if (ui.accountMenu.contains(event.target)) {
+        return;
+      }
+      if (event.target.closest && event.target.closest('#account-menu-button')) {
+        return;
+      }
+      closeAccountMenu();
+    });
+    window.addEventListener('resize', () => closeAccountMenu());
+    window.addEventListener('scroll', () => closeAccountMenu(), { passive: true });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !ui.accountMenu.hidden) {
+        closeAccountMenu(true);
+      }
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (ui.contactMenu.hidden) {
+        return;
+      }
+      if (ui.contactMenu.contains(event.target)) {
+        return;
+      }
+      if (event.target.closest && event.target.closest('.contact-more')) {
+        return;
+      }
+      closeContactMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !ui.contactMenu.hidden) {
+        closeContactMenu();
+      }
+    });
+
+    ui.encryptButton.addEventListener('click', handleEncrypt);
+    ui.decryptButton.addEventListener('click', handleDecrypt);
+    ui.plaintext.addEventListener('input', updatePlaintextCount);
+    ui.copyCiphertext.addEventListener('click', () => {
+      copyText(ui.ciphertext.value, '密文已复制', ui.ciphertext);
+    });
+    ui.copyDecrypted.addEventListener('click', () => {
+      copyText(ui.decryptedText.value, '明文已复制', ui.decryptedText);
+    });
+
+    ui.saveNickname.addEventListener('click', saveNickname);
+    ui.viewPrivateKey.addEventListener('click', openViewPasswordDialog);
+    ui.resetPrivateKey.addEventListener('click', openResetPrivateDialog);
+    ui.viewPasswordSubmit.addEventListener('click', submitViewPassword);
+    ui.viewPasswordToggle.addEventListener('click', () => {
+      togglePasswordVisibility(ui.viewPasswordInput, ui.viewPasswordToggle);
+    });
+    ui.viewPasswordInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        submitViewPassword();
+      }
+    });
+    ui.viewPasswordDialog.addEventListener('close', () => {
+      ui.viewPasswordInput.value = '';
+      ui.viewPasswordInput.type = 'password';
+      ui.viewPasswordToggle.textContent = '显示';
+      ui.viewPasswordToggle.setAttribute('aria-pressed', 'false');
+      clearStatus(ui.viewPasswordStatus);
+    });
+
+    ui.privateKeyDialog.addEventListener('close', () => {
+      ui.revealedPrivateKey.textContent = '';
+    });
+
+    ui.resetPassword.addEventListener('input', updateResetButtonState);
+    ui.resetPhrase.addEventListener('input', updateResetButtonState);
+    ui.resetSubmit.addEventListener('click', resetPrivateKey);
+    [ui.resetPassword, ui.resetPhrase].forEach((input) => {
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !ui.resetSubmit.disabled) {
+          event.preventDefault();
+          resetPrivateKey();
+        }
+      });
+    });
+    ui.resetPrivateDialog.addEventListener('close', () => {
+      ui.resetPassword.value = '';
+      ui.resetPhrase.value = '';
+      clearStatus(ui.resetStatus);
+      resetBusy = false;
+      ui.resetSubmit.textContent = '重置私钥';
+      ui.resetSubmit.disabled = true;
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !ui.contactMenu.hidden) {
+        closeContactMenu();
+      }
+    });
+  }
+
+  function init() {
+    try {
+      if (typeof nacl !== 'object' || !nacl.box || !nacl.util) {
+        throw new AppError('加密库加载失败。');
+      }
+      if (typeof window.TextEncoder !== 'function' || typeof window.TextDecoder !== 'function') {
+        throw new AppError('当前浏览器不支持 UTF-8 编解码。');
+      }
+
+      bindEvents();
+      updateFileIndicators();
+      boot();
+    } catch (error) {
+      showBootFatal(error && error.message ? error.message : '本机加密终端初始化失败。');
+    }
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>

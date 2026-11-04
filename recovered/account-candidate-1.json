@@ -1,0 +1,10 @@
+{
+  "encrypted": true,
+  "version": 2,
+  "algorithm": "AES-256-GCM",
+  "kdf": "PBKDF2",
+  "kdfIterations": 600000,
+  "salt": "iL1vF2zoubTvO1vHPWCOTw==",
+  "iv": "kf+YZ595YvdmEQ6U",
+  "data": "UzZ/dNz+x71dz8Y/Hrqc5CxEnUDmCb8Wvm3kZmAGKdQq7/e/pqUKja4VAkhf1TPnYUB/fqofvMZKAni9whwo2IL/4DKQErOgPiY/cjlVNItPQgz90gi1QG4QcM89l/GI2mOCWvMi5P7hVIsLiEwdy6woGjsNUV0mJeC/9ssuQk1AUI1ilBByISiRmhLoF25JPLhbdsaJ8ZMKBAl+gI6onQxSJbV/lDVbXGJeo9zWaXbmCB5SojOM/LNNaNg3q4NPsPQQqMMN7W5ezgcaiVM4IfsFcPiF6feoZAl3NBKp87cuETKj8E814lOHRrtmDU+5S4A5GZa/4K+Ad7Ikya0n3PjrhzCA74lSJ9veA5N+AYe3+6JFGwNW7JbXAuooru+BpLYZ2B1ftZ/2Y22W92y9nPQz/VDsSocQfKGipqedkAfCJQsmnyLPvcQBcjK9cyCHIe4ZMmA="
+}

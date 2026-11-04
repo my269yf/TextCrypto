@@ -1,0 +1,16 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "text-crypto",
+  "outputfilename": "TextCrypto",
+  "frontend:dir": "frontend",
+  "frontend:install": "",
+  "frontend:build": "",
+  "wailsjsdir": "./frontend",
+  "info": {
+    "companyName": "TEXT_CRYPTO",
+    "productName": "本机加密终端",
+    "productVersion": "1.0.0",
+    "copyright": "",
+    "comments": "Offline text encryption terminal built with Wails"
+  }
+}
